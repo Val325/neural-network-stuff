@@ -139,7 +139,7 @@ def getSentenceData(path, vocabulary_size=8000):
     
     #all_words = index_to_word
 
-    return X_train, y_train, index_to_word 
+    return X_train, y_train, index_to_word, word_to_index
 
 class Model:
     def __init__(self, word_dim, hidden_dim=100, bptt_truncate=4):
@@ -248,21 +248,49 @@ class Model:
 
 word_dim = 8000
 hidden_dim = 100
-X_train, y_train, words_all = getSentenceData('data/reddit-comments-2015-08.csv', word_dim)
+X_train, y_train, index_to_word, word_to_index = getSentenceData('data/reddit-comments-2015-08.csv', word_dim)
 
 #word hello:  1860
 #word new:  157
 #word suffer:  2726
 
-sentense = [1860, 157, 2726]
+num_words_generate = 8
+sentense = []
+sentense_text = []
+text = input("Your prompt: ")
+
+token_text = nltk.word_tokenize(text)
+#print("tokenized text:", token_text)
+
+for token in token_text:
+#    print("text: ", word_to_index[token.lower()])
+    sentense.append(word_to_index[token.lower()])
+    sentense_text.append(token.lower())
 
 np.random.seed(10)
 rnn = Model(word_dim, hidden_dim)
 
-losses = rnn.train(X_train[:5], y_train[:5], learning_rate=0.005, nepoch=3, evaluate_loss_after=1)
+#print("words: ", sentense)
+losses = rnn.train(X_train[:10], y_train[:10], learning_rate=0.005, nepoch=4, evaluate_loss_after=1)
 words = rnn.predict(sentense)
+#print("predict: ", words)
+
+predicted_words = []
 
 for word in words:
-    print("predict word num: ", word)
-    print("predict all_words_len: ", len(words_all[word]))
-    print("predict next word: ", words_all[word]) 
+#    print("predict word num: ", word)
+#   print("predict all_words_len: ", len(words_all[word]))
+#   print("predict next word: ", index_to_word[word])
+    predicted_words.append(index_to_word[word])
+
+end_text = []
+end_text.append(sentense_text)
+end_text.append(predicted_words)
+
+processed_text = ""
+
+for word in end_text:
+    for word_inside in word:
+        processed_text += str(word_inside) + " "
+
+print("generated text: ", processed_text)
