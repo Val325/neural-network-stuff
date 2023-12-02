@@ -258,6 +258,7 @@ num_words_generate = 8
 sentense = []
 sentense_text = []
 text = input("Your prompt: ")
+len_prompt = len(text)
 
 token_text = nltk.word_tokenize(text)
 #print("tokenized text:", token_text)
@@ -270,17 +271,19 @@ for token in token_text:
 np.random.seed(10)
 rnn = Model(word_dim, hidden_dim)
 
-#print("words: ", sentense)
-losses = rnn.train(X_train[:10], y_train[:10], learning_rate=0.005, nepoch=4, evaluate_loss_after=1)
+losses = rnn.train(X_train[:50], y_train[:50], learning_rate=0.005, nepoch=5, evaluate_loss_after=1)
 words = rnn.predict(sentense)
-#print("predict: ", words)
+pred_words = []
+for wor in words: 
+    pred_words.append(wor)
+
+for iter in range(len_prompt):
+    words_pred_prompt = rnn.predict(pred_words)
+    pred_words.append(words_pred_prompt[iter])
 
 predicted_words = []
-
-for word in words:
-#    print("predict word num: ", word)
-#   print("predict all_words_len: ", len(words_all[word]))
-#   print("predict next word: ", index_to_word[word])
+print("pred word: ", pred_words)
+for word in pred_words:
     predicted_words.append(index_to_word[word])
 
 end_text = []
@@ -292,5 +295,6 @@ processed_text = ""
 for word in end_text:
     for word_inside in word:
         processed_text += str(word_inside) + " "
+
 
 print("generated text: ", processed_text)
