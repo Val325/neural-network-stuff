@@ -148,8 +148,7 @@ class Model:
         self.bptt_truncate = bptt_truncate
         self.U = np.random.uniform(-np.sqrt(1. / word_dim), np.sqrt(1. / word_dim), (hidden_dim, word_dim))
         self.W = np.random.uniform(-np.sqrt(1. / hidden_dim), np.sqrt(1. / hidden_dim), (hidden_dim, hidden_dim))
-        self.V = np.random.uniform(-np.sqrt(1. / hidden_dim), np.sqrt(1. / hidden_dim), (word_dim, hidden_dim))
-
+        self.V = np.random.uniform(-np.sqrt(1. / hidden_dim), np.sqrt(1. / hidden_dim), (word_dim, hidden_dim)) 
     '''
         forward propagation (predicting word probabilities)
         x is one single data, and a batch of data
@@ -174,6 +173,16 @@ class Model:
         output = Softmax()
         layers = self.forward_propagation(x)
         return [np.argmax(output.predict(layer.mulv)) for layer in layers]
+    
+    def load_weights(self):
+        self.U = np.load('weights/rnn/U.npy')
+        self.W = np.load('weights/rnn/W.npy')
+        self.V = np.load('weights/rnn/V.npy')
+
+    def save_weights(self):
+        np.save('weights/rnn/U.npy', self.U)
+        np.save('weights/rnn/W.npy', self.W)
+        np.save('weights/rnn/V.npy', self.V)
 
     def calculate_loss(self, x, y):
         assert len(x) == len(y)
@@ -271,7 +280,9 @@ for token in token_text:
 np.random.seed(10)
 rnn = Model(word_dim, hidden_dim)
 
-losses = rnn.train(X_train[:50], y_train[:50], learning_rate=0.005, nepoch=5, evaluate_loss_after=1)
+#losses = rnn.train(X_train[:30], y_train[:30], learning_rate=0.005, nepoch=3, evaluate_loss_after=1)
+#rnn.save_weights()
+rnn.load_weights()
 words = rnn.predict(sentense)
 pred_words = []
 for wor in words: 
