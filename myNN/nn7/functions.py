@@ -7,6 +7,26 @@ def sigmoid(x):
     x = x.astype(float)
     return 1 / (1 + np.exp(-x))
 
+def softmax_grad(softmax):
+    # Reshape the 1-d softmax to 2-d so that np.dot will do the matrix multiplication
+    s = softmax.reshape(-1,1)
+    return np.diagflat(s) - np.dot(s, s.T)
+
+
+def loss_rnn(y_hat, y):
+    """
+    Cross-entropy loss function - Calculating difference between 2 probability distributions.
+    First, calculate cross-entropy loss for each time step with np.sum, which returns a numpy array
+    Then, sum across individual losses of all time steps with sum() to get a scalar value.
+    :param y_hat: predicted value
+    :param y: expected value - true label
+    :return: total loss
+    """
+    return np.sum(-np.sum(y[i] * np.log(y_hat[i]) for i in range(len(y))))
+
+def loss_rnn_derivative_softmax(y_hat, y):
+    return y_hat - y 
+
 def mse_loss(y_pred, y_true):
     """
     Calculates the mean squared error (MSE) loss between predicted and true values.
@@ -29,7 +49,7 @@ def mse_loss(y_pred, y_true):
 def mse_derivative(y_true, y_pred): 
     n = len(y_pred)
     #return -2 * np.sum(y_true - y_pred) / n
-    return (y_pred - y_true) / n 
+    return (y_pred - y_true) #/ n 
 
 # binary cross-entropy loss function
 def binary_cross_entropy_loss(y_pred, y_true):

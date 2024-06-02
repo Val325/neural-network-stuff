@@ -13,17 +13,19 @@ seed = None if random_state is None else int(random_state)
 rng = np.random.default_rng(seed=seed)
 
 with open("dataset/shakespeare.txt") as data:
-    text_data = data.read()[0:3000].lower()
+    text_data = data.read().lower()
 
-tokens = word_tokenize(text_data)
+tokens = word_tokenize(text_data)[0:10]
 vocabulary = list(set(tokens))
 
+print("size tokens: ", len(tokens))
+
 print("size vocabulary: ", len(vocabulary))
-print("size vector: ", len(vocabulary[0]))
+print("size vector vocabulary: ", len(vocabulary[0]))
 
 # Generate one-hot encoded vectors for each word in the vocabulary
 one_hot_encoded = []
-for word in vocabulary:
+for word in tokens:
     # Create a list of zeros with the length of the vocabulary
     encoding = [0] * len(tokens)
     
@@ -67,30 +69,40 @@ class NeuralNetworkRecurrent:
         self.b2 = np.zeros((self.size_output, 1))
         print("--------------------------------------------------")
 
-    def preditc_sentence(self, word, n):
-        tokens = []
-        for time in range(n):
-            h = np.tanh(np.dot(self.w1, word).astype('float64') + np.dot(self.wh, self.hidden[time-1]) + self.b1)
-            o = softmax(np.dot(self.w2, h) + self.b2)
-            tokens.append(tokens[np.argmax(o)]) 
-        return tokens
+    def preditc_word(self, word, index):
+        index_token = 0
+        #print("word: ", word)
+        #print("wh2: ", self.w2)
+
+        #for time in range(n):
+        h = np.tanh(np.dot(self.w1, word[1]) + np.dot(self.wh, self.hidden[-1]) + self.b1)
+        o = softmax(np.dot(self.w2, h) + self.b2)
+        index_token = np.argmax(o[index])
+            #print("o len: ", len(o))
+            #try:
+            #tokens.append(o) 
+            #except IndexError:
+            #    print("index error")
+        return index_token
 
     def feedforward(self, data):
-        #print("data size: ", len(data))
+        #print("data size: ", data)
         #print("x: ", data[0][0])
         #print("y: ", data[0][1])
 
         self.hidden = {}
+        self.sum_output = {}
         self.output = {}
         self.hidden[-1] = np.zeros((self.num_neuron_hidden, 1))
         self.loss = 0
 
         for time in range(len(data)):
-            self.hidden[time] = np.tanh(np.dot(self.w1, data[time][1].T).astype('float64') + np.dot(self.wh, self.hidden[time-1]) + self.b1)
-            self.output[time] = softmax(np.dot(self.w2, self.hidden[time]) + self.b2)
+            self.hidden[time] = np.tanh(np.dot(self.w1, data[time][0].T).astype('float64') + np.dot(self.wh, self.hidden[time-1]) + self.b1)
+            self.sum_output[time] = np.dot(self.w2, self.hidden[time]) + self.b2 
+            self.output[time] = softmax(self.sum_output[time])
             #print("self.output[time].shape: ", self.output[time].shape)
             #print("data[time][1]: ", data[time][1].T.shape)
-            self.loss += mse_loss(self.output[time], data[time][1].T)
+            self.loss += loss_rnn(self.output[time], data[time][1].T)
         
         print("loss: ", self.loss)
         #print("generate sentense: ", tokens[np.argmax(data[time][1])], " ", tokens[np.argmax(self.output[time])])
@@ -106,16 +118,25 @@ class NeuralNetworkRecurrent:
 
         self.db1 = np.zeros_like(self.b1)
         self.db2 = np.zeros_like(self.b2)
+        #grad_prev_h = {} #np.zeros_like(self.w2)
+        grad_prev_h = 0
 
         for time in reversed(range(len(data))):
-            derivative_error = mse_derivative(data[time][1].T, pred[time]).astype('float64') 
+            derivative_error = loss_rnn_derivative_softmax(pred[time], data[time][1].T).astype('float64')  
+            #print("derivative_error: ", derivative_error.shape) 
+            #print("softmax: ", softmax_grad(pred[time]).shape)
+            #print("hidden[time]: ", hidden[time].shape)
 
             self.dw2 += np.dot(derivative_error, hidden[time].T).astype('float64')
             self.db2 += derivative_error
             
-            self.db1 += (1 - hidden[time] * hidden[time]) * np.dot(self.w2.T, derivative_error).astype('float64')
-            self.dwh += (1 - hidden[time] * hidden[time]) * np.dot(self.w2.T, derivative_error).astype('float64') * hidden[time-1] 
-            self.dw1 += (1 - hidden[time] * hidden[time]) * np.dot(self.w2.T, derivative_error).astype('float64') * data[time][1].astype('float64') 
+            grad_h = np.dot(self.w2.T, derivative_error) + grad_prev_h
+            grad_u = grad_h * (1 - hidden[time] * hidden[time])
+            self.dwh += np.dot(grad_u, hidden[time-1].T) # (1 - hidden[time] * hidden[time]) * np.dot(self.w2.T, derivative_error).astype('float64') * hidden[time-1]
+            
+            self.db1 += grad_u #(1 - hidden[time] * hidden[time]) * self.dwh  #* np.dot(self.w2.T, derivative_error).astype('float64')
+            self.dw1 += np.dot(self.wh.T, grad_u) #(1 - hidden[time] * hidden[time]) * np.dot(self.w2.T, derivative_error).astype('float64') * data[time][1].astype('float64')
+            grad_prev_h = np.dot(self.wh.T, grad_u)
         
         self.b1 -= self.learn_rate * self.b1 
         self.b2 -= self.learn_rate * self.b2
@@ -129,45 +150,17 @@ class NeuralNetworkRecurrent:
             np.clip(dparam, -5, 5, dparam) 
     
     def train(self, x, y, all_train):
-        #print("all: ", all_train)
-        size_data = len(x)
-        all_pred = []
-        batch_size = 64
-        #print("all: ", all_train[:batch])
-        #print("num: iter: ", round(size_data / batch))
-        num_batch = round(size_data / batch_size) 
-        #print("all each 1: ", all_train[num_batch * 1:batch])
-        #print("all each 2: ", all_train[num_batch * 2:batch])
+        for i in range(700):
+            data_output, data_hidden = self.feedforward(all_train)
+            print("next token 1: ", self.preditc_word(np.array(one_hot_encoded[1], dtype=object), 1))
+            self.backpropogation(all_train, data_output, data_hidden)
+        #pass
+        #for ep in range(5):
+            #for i in range(len(all_train)):
+            #pred = network.feedforward(all_train)
+            #print("pred: ", tokens[np.argmax(pred)])
 
-
-        for ep in range(self.epoch):
-            rng.shuffle(all_train)
-            for index in range(num_batch):
-                stop = index + batch_size
-
-                x_batch, y_batch = all_train[index:stop, :-1], all_train[index:stop, -1:]
-                for i in range(len(x_batch)):
-                    #print("x_batch: ", x_batch[i][0][0], "y_batch: ", y_batch[i][0][0])
-                    pred = self.feedforward(x_batch[i][0][0])
-                #print("pred: ", pred)
-                #print("y: ", y[index])
-                    all_pred.append(np.array(pred))
-                    self.backpropogation(pred, y_batch[i][0][0], index)
-                    error = mse_loss(pred, y_batch[i][0][0]) 
-                    print("error", error) 
-
-
-            all_pred = []
-            #print("self.w2 ", self.w2)
-
-
-            #if ep % 10 == 0:
-            print("--------------------")
-            print("epoch: ", ep)
-            print("times: ", self.num_times)
-
-
-network = NeuralNetworkRecurrent(0.1, 2, len(vocabulary), 30, len(vocabulary))
+network = NeuralNetworkRecurrent(0.05, 2, len(tokens), 10, len(tokens))
 
 
 all_train = []
@@ -175,11 +168,13 @@ X = []
 Y = []
 
 #print("(one_hot_encoded[1][0]: ", one_hot_encoded[1][1])
+print("tokens len: ", len(tokens))
 for i in range(len(tokens)):
 
     #network.train(text_data[i], text_data[i+1], np.array(all_train))
     try:
         X.append(one_hot_encoded[i][1])
+    #print(one_hot_encoded[i][1])
         Y.append(one_hot_encoded[i+1][1])
         #print("X: ", one_hot_encoded[i][1])
         #print("Y: ", one_hot_encoded[i+1][1])
@@ -189,10 +184,12 @@ for i in range(len(tokens)):
         elem = [[one_hot_encoded[i][1]],[one_hot_encoded[i+1][1]]]
         #print("elem: ", elem)
     except IndexError:
-        break
+    #    break
         print("end processing")
     all_train.append(np.array(elem, dtype=object))
 
+
+print("all_train size: ", len(all_train))
 #try:
     #print("len(all_train) : ", len(all_train))
     #network.train(X, Y, np.array(all_train))
@@ -203,15 +200,27 @@ for i in range(len(tokens)):
 size_gen = 3
 text = ""
 text_data_pred = None
-start_word = one_hot_encoded[0][1]
+start_word = one_hot_encoded[1][1]
 two_word = one_hot_encoded[1][1]
-hprev = np.zeros((40,1))
-for i in range(25):
-    print("num: ", i)
-    pred_output, pred_hidden = network.feedforward(all_train)
-    network.backpropogation(all_train, pred_output, pred_hidden)
-    start_pred = network.preditc_sentence(start_word, 7)
-    print("generate: ", start_pred)
+hprev = np.zeros((100,1))
+arr_gen = []
+network.train(X, Y, all_train)
+    #arr_gen.append()
+#oneword = network.preditc_sentence(start_word, 1)
+#twoword = network.preditc_sentence(oneword[0], 1) 
+#threeword = network.preditc_sentence(twoword[0], 1) 
+
+#text = tokens[np.argmax(start_word)] + " " + tokens[np.argmax(oneword)] + " " + tokens[np.argmax(twoword)] + " " + tokens[np.argmax(threeword)] 
+#print("text: ", text)
+#start_pred = network.feedforward(start_word)
+#print("generate: ", tokens[np.argmax(start_word)], " ", np.argmax(start_pred))
+
+
+#text = tokens[np.argmax(start_word)] + " " 
+#for t in arr_gen:
+#    text += tokens[np.argmax(t)] + " "
+
+#print("generate: ", text)
 
 #two_pred = network.preditc_sentence(start_pred)
 #three_pred = network.preditc_sentence(two_pred)
