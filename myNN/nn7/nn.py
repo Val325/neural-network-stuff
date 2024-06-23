@@ -152,7 +152,14 @@ class NeuralNetworkRecurrent:
     def train(self, x, y, all_train):
         for i in range(700):
             data_output, data_hidden = self.feedforward(all_train)
-            print("next token 1: ", self.preditc_word(np.array(one_hot_encoded[1], dtype=object), 1))
+            text1 = self.preditc_word(np.array(one_hot_encoded[4], dtype=object), 4)
+            print("next token 0: ", text1)
+            print("token: ", tokens)
+            text1_all = tokens[4] + " " + tokens[text1] 
+            print("text token 1: ", text1_all)
+            #print("next token 1: ", self.preditc_word(np.array(one_hot_encoded[1], dtype=object), 1))
+            #print("next token 3: ", self.preditc_word(np.array(one_hot_encoded[3], dtype=object), 3))
+            #print("next token 4: ", self.preditc_word(np.array(one_hot_encoded[4], dtype=object), 4))
             self.backpropogation(all_train, data_output, data_hidden)
         #pass
         #for ep in range(5):
