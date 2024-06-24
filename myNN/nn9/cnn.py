@@ -1,6 +1,76 @@
 import numpy as np
 import math
+from functions import *
+import math
+import os
+import random
+from PIL import Image, ImageOps
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
+cropimagesize = (48, 48)
 
+path_cats_train = "dataset/training_set/training_set/cats"
+path_dogs_train = "dataset/training_set/training_set/dogs"
+
+dir_list_cat_train = os.listdir(path_cats_train)
+dir_list_dog_train = os.listdir(path_dogs_train)
+
+print("Files and directories in ", path_cats_train, " len: ", len(dir_list_cat_train))
+print("Files and directories in ", path_dogs_train, " len: ", len(dir_list_dog_train))
+
+label_dog = np.array([0, 1])
+label_cat = np.array([1, 0])
+
+
+train_dataset = []
+true_label = []
+
+#preprocessing.normalize()
+def load_image_numpy(path):
+    image = Image.open(path) 
+    image = image.resize(cropimagesize)
+    #image = ImageOps.grayscale(image)
+    #image = (image-np.min(image))/(np.max(image)-np.min(image))
+    #image = (image - np.min(image))/np.ptp(image)
+    #np.interp(image, (image.min(), image.max()), (0, +1))
+    #image /= (np.max(image)/255.0)
+    #return preprocessing.normalize(np.array(image))
+    x_min = np.array(image).min(axis=(1, 2), keepdims=True)
+    x_max = np.array(image).max(axis=(1, 2), keepdims=True)
+
+    image = (np.array(image) - x_min)/(x_max-x_min)
+    return image
+"""
+for i in dir_list_sad_train:
+    if i.lower().endswith(('.png')):
+        dir_image = path_sad_train + "/" + i
+        image = Image.open(dir_image)
+        image = image.resize(cropimagesize)
+        #image = ImageOps.grayscale(image)
+        train_dataset.append(np.array(image).flatten())
+        true_label.append(label_sad)
+
+for i in dir_list_smile_train:
+    if i.lower().endswith(('.png')):
+        dir_image = path_smile_train + "/" + i
+        image = Image.open(dir_image)
+        image = image.resize(cropimagesize)
+        #image = ImageOps.grayscale(image)
+        train_dataset.append(np.array(image).flatten())
+        true_label.append(label_smile)
+
+print("len dataset: ", len(train_dataset))
+print("len label: ", len(true_label))
+
+amount = len(train_dataset) 
+# preprocessing.normalize()
+x_data = np.asarray(train_dataset)
+x_data = (x_data - np.min(x_data))/np.ptp(x_data)
+y_data = np.asarray(true_label) 
+print("x_data.shape: ", x_data.shape)
+print("len(x_data[0]): ", len(x_data[0]))
+lenght_data = len(x_data[0]) 
+"""
 class ConvulutionNeuralNetwork:
     def __init__(self, learning_rate, epochs, size_input, neuron_hidden, size_output):
 
@@ -37,7 +107,7 @@ class ConvulutionNeuralNetwork:
         Arguments:
         A_prev -- output activations of the previous layer, numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
         W -- Weights, numpy array of shape (C, f, f, n_C_prev)
-        b -- Biases, numpy array of shape (1, 1, 1, n_C)
+        b -- Biases, numpy array of shape (n_C, 1, 1, 1)
         hparameters -- python dictionary containing "stride" and "pad"
         
         Returns:
@@ -83,7 +153,7 @@ class ConvulutionNeuralNetwork:
         assert(Z.shape == (m, n_H, n_W, n_C))
     
         # Save information in "cache" for the backprop
-        cache = (A_prev, W, b, hparameters)
+        cache = (layer_prev, W, b, hparameters)
     
         return Z, cache
     def pool_forward(self, A_prev, hparameters, mode = "max"):
@@ -321,51 +391,64 @@ class ConvulutionNeuralNetwork:
 
     def max_pooling(self):
         pass
-    def feedforward(self):
-        pass
+    def feedforward(self, x):
+        hparameters = {"pad" : 0,
+               "stride": 1}
+        W = np.random.randn(3, 5, 5, 3)
+        b = np.random.randn(3, 1, 1, 1)
+        Conv1 = self.convulution(x, W, b, hparameters)
+        print("Conv1.shape: ", np.array(Conv1, dtype=object)[0].shape)
+        #self.input_data = x
+        self.z1 = np.dot(self.w1, np.array(Conv1, dtype=object)[0]) + self.b1
+        self.sigmoid_hidden = sigmoid(self.z1)
+        self.z2 = np.dot(self.w2, self.sigmoid_hidden) + self.b2
+        self.sigmoid_output = softmax(self.z2)
+        return self.sigmoid_output  
 
 ConvNetwork = ConvulutionNeuralNetwork(0.01, 1000, 4, 5, 3)
+arrayCats = np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")], dtype=object)
+print("feed-forward", ConvNetwork.feedforward(np.array(arrayCats)))
 #ConvNetwork.feedforward()
-np.random.seed(1)
-A_prev = np.random.randn(10, 4, 4, 3)
-W = np.random.randn(8, 2, 2, 3)
-b = np.random.randn(8, 1, 1, 1)
-hparameters = {"pad" : 2,
-               "stride": 1}
-Z, cache_conv = ConvNetwork.convulution(A_prev, W, b, hparameters) 
+#np.random.seed(1)
+#A_prev = np.random.randn(10, 4, 4, 3)
+#W = np.random.randn(8, 2, 2, 3)
+#b = np.random.randn(8, 1, 1, 1)
+#hparameters = {"pad" : 2,
+#               "stride": 1}
+#Z, cache_conv = ConvNetwork.convulution(A_prev, W, b, hparameters) 
 #print("Z.shape =", Z.shape)
 #print("cache_conv[0][1][2][3] =", cache_conv[0][1][2][3])
-hparameters_pool = {"stride" : 1, "f": 4}
-A, cache = ConvNetwork.pool_forward(Z, hparameters_pool)
+#hparameters_pool = {"stride" : 1, "f": 4}
+#A, cache = ConvNetwork.pool_forward(Z, hparameters_pool)
 #print("mode = max")
 #print("A =", A)
 #print()
 
-A, cache = ConvNetwork.pool_forward(Z, hparameters_pool, mode = "average")
+#A, cache = ConvNetwork.pool_forward(Z, hparameters_pool, mode = "average")
 #print("mode = average")
 #print("A =", A)
 
-dA, dW, db = ConvNetwork.conv_backward(Z, cache_conv)
+#dA, dW, db = ConvNetwork.conv_backward(Z, cache_conv)
 #print("dA_mean =", np.mean(dA))
 #print("dW_mean =", np.mean(dW))
 #print("db_mean =", np.mean(db))
 
-x = np.random.randn(2,3)
-mask = ConvNetwork.create_mask_from_window(x)
+#x = np.random.randn(2,3)
+#mask = ConvNetwork.create_mask_from_window(x)
 #print('x = ', x)
 #print("mask = ", mask)
 
-A_prev = np.random.randn(5, 5, 3, 2)
-hparameters = {"stride" : 1, "f": 2}
-A, cache = ConvNetwork.pool_forward(A_prev, hparameters)
-dA = np.random.randn(5, 4, 2, 2)
+#A_prev = np.random.randn(5, 5, 3, 2)
+#hparameters = {"stride" : 1, "f": 2}
+#A, cache = ConvNetwork.pool_forward(A_prev, hparameters)
+#dA = np.random.randn(5, 4, 2, 2)
 
-dA_prev = ConvNetwork.pool_backward(dA, cache, "max")
+#dA_prev = ConvNetwork.pool_backward(dA, cache, "max")
 #print("mode = max")
 #print('mean of dA = ', np.mean(dA))
 #print('dA_prev[1,1] = ', dA_prev[1,1])  
 #print()
-dA_prev = ConvNetwork.pool_backward(dA, cache, "average")
+#dA_prev = ConvNetwork.pool_backward(dA, cache, "average")
 #print("mode = average")
 #print('mean of dA = ', np.mean(dA))
 #print('dA_prev[1,1] = ', dA_prev[1,1])
