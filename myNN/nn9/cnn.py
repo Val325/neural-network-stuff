@@ -280,12 +280,15 @@ class ConvulutionNeuralNetwork:
                         #print("dZ.shape: ", dZ.shape)
 
                         da_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :] += W[c] * dZ[i, h, w, c]
-                        dW[:,:,:,c] += a_slice * dZ[i, h, w, c]
+                        dW[:,:,:,c] += np.array(a_slice, dtype=float) * np.array(dZ[i, h, w, c], dtype=float)
                         db[:,:,:,c] += dZ[i, h, w, c]
                     
             # Set the ith training example's dA_prev to the unpaded da_prev_pad (Hint: use X[pad:-pad, pad:-pad, :])
-            dA_prev[i, :, :, :] = da_prev_pad[pad:-pad, pad:-pad, :]
- 
+            if pad is not 0:
+                dA_prev[i, :, :, :] = da_prev_pad[pad:-pad, pad:-pad, :]
+            else:
+                dA_prev[i, :, :, :] = da_prev_pad[:, :, :]
+
         # Making sure your output shape is correct
         assert(dA_prev.shape == (m, n_H_prev, n_W_prev, n_C_prev))
     
@@ -420,13 +423,14 @@ class ConvulutionNeuralNetwork:
         }
         W2 = np.random.randn(3, 5, 5, 3)
         b2 = np.random.randn(3, 1, 1, 1)
-        Conv2 = self.convulution(np.array(pool1[0], dtype=object), W2, b2, hparameters)
+        Conv2, conv2_cache = self.convulution(np.array(pool1[0], dtype=object), W2, b2, hparameters)
+        self.conv2_cache = conv2_cache 
         print("Conv2.shape: ", np.array(Conv2[0], dtype=object).shape)
         hparameters = {
             "f" : 2,
             "stride": 2
         }
-        pool2, pool2_cache = self.pool_forward( np.array(Conv2[0], dtype=object), hparameters, "max")
+        pool2, pool2_cache = self.pool_forward( np.array(Conv2, dtype=object), hparameters, "max")
         self.pool2_shape = pool2.shape 
         self.pool2_cacheBprop = pool2_cache 
         print("pool2.shape: ", np.array(pool2[0], dtype=object).shape)
@@ -446,14 +450,15 @@ class ConvulutionNeuralNetwork:
         grad_w2 = np.outer(grad_w2, self.sigmoid_hidden.T) 
         
         delta_input = (delta @ self.w2) * deriv_sigmoid(self.z1)
-        grad_w1 = np.outer(delta_input, self.input_data.T)
+        grad_w1 = delta_input @ self.w1   #np.outer(delta_input, self.input_data.T)
         grad_w1_upd = self.w1.T @ delta_input 
         grad_b1 = delta_input 
-        print("self.input_data.T: ", self.input_data.shape) 
-        print("self.pool2_shape: ", self.pool2_shape)
-        print("grad.shape: ", grad_w1.shape)
-        print("grad_w1_upd.shape: ", grad_w1_upd.shape)
-        self.pool_backward(self.w1.reshape(self.pool2_shape), self.pool2_cacheBprop, "max")
+
+        poolbackward2 = self.pool_backward(grad_w1_upd.reshape(self.pool2_shape), self.pool2_cacheBprop, "max") 
+        print("poolbackward2.shape: ", poolbackward2.shape)
+        conv2back = self.conv_backward(poolbackward2, self.conv2_cache)
+        #conv2back = np.array([conv2back])
+        print("conv2back.shape: ", np.array(conv2back, dtype=object)[0].shape)
         #Gradient descend
         self.w2 -= self.learn_rate * grad_w2 
         self.b2 -= self.learn_rate * grad_b2
@@ -471,7 +476,7 @@ class ConvulutionNeuralNetwork:
 ConvNetwork = ConvulutionNeuralNetwork(0.01, 10, 243, 40, 2)
 print("image.shape: ", np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]).shape)
 #arrayCats = [load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]
-print("feed-forward", ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])))
+#print("feed-forward", ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])))
 ConvNetwork.train(ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])), label_cat)
 #ConvNetwork.feedforward()
 #np.random.seed(1)
