@@ -24,7 +24,7 @@ label_cat = np.array([1, 0])
 train_size = len(dir_list_cat_train) + len(dir_list_dog_train) 
 process_amount = 0
 
-train_size_backprop = 20
+train_size_backprop = 150
 train_dataset = []
 true_label = []
 
@@ -32,8 +32,8 @@ true_label = []
 def load_image_numpy(path):
     global process_amount 
     image = Image.open(path)
-    
     image = image.resize(cropimagesize)
+
     #image = ImageOps.grayscale(image)
     #image = (image-np.min(image))/(np.max(image)-np.min(image))
     #image = (image - np.min(image))/np.ptp(image)
@@ -57,6 +57,9 @@ for i in dir_list_cat_train:
     if i.lower().endswith(('.jpg')):
         dir_image = path_cats_train + "/" + i
         image = load_image_numpy(dir_image) #Image.open(dir_image)
+        
+
+
         train_dataset.append(np.array(image))
         true_label.append(label_cat)
 
@@ -67,6 +70,8 @@ for i in dir_list_dog_train:
     if i.lower().endswith(('.jpg')):
         dir_image = path_dogs_train + "/" + i 
         image = load_image_numpy(dir_image) #Image.open(dir_image)
+
+        
         train_dataset.append(np.array(image))
         true_label.append(label_dog)
 
@@ -92,10 +97,10 @@ class ConvulutionNeuralNetwork:
         self.num_neuron_hidden = neuron_hidden
         
         self.Wconv1 = np.random.randn(3, 5, 5, 3)
-        self.bconv1 = np.random.randn(3, 1, 1, 3)
+        self.bconv1 = np.random.randn(3, 1, 1, 1)
 
         self.Wconv2 = np.random.randn(3, 5, 5, 3)
-        self.bconv2 = np.random.randn(3, 1, 1, 3)
+        self.bconv2 = np.random.randn(3, 1, 1, 1)
 
         self.w1 = np.array(np.random.randn(self.num_neuron_hidden, size_input) * 0.01, dtype=np.float64)
         self.w2 = np.array(np.random.randn(self.size_output, self.num_neuron_hidden) * 0.01, dtype=np.float64) 
@@ -134,7 +139,8 @@ class ConvulutionNeuralNetwork:
     
         # Retrieve dimensions from A_prev's shape (≈1 line)  
         (m, n_H_prev, n_W_prev, n_C_prev) = layer_prev.shape
-    
+        #print("b.shape: ", b.shape)
+        #print("W.shape: ", W.shape)
         # Retrieve dimensions from W's shape (≈1 line)
         (n_C, f, f, n_C_prev) = W.shape
         # Retrieve information from "hparameters" (≈2 lines)
@@ -163,7 +169,7 @@ class ConvulutionNeuralNetwork:
                         # Use the corners to define the (3D) slice of a_prev_pad (See Hint above the cell). (≈1 line)
                         a_slice_prev = a_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :]
                         # Convolve the (3D) slice with the correct filter W and bias b, to get back one output neuron. (≈1 line)
-                        Z[i, h, w, c] = np.sum(np.multiply(a_slice_prev, W[c]) + b[c]) 
+                        Z[i, h, w, c] = np.sum(np.multiply(a_slice_prev, W[c]) + b) 
                                         
 
         # Making sure your output shape is correct
@@ -303,15 +309,15 @@ class ConvulutionNeuralNetwork:
                         db[:,:,:,c] += dZ[i, h, w, c]
                     
             # Set the ith training example's dA_prev to the unpaded da_prev_pad (Hint: use X[pad:-pad, pad:-pad, :])
-            if pad is not 0:
+            if pad != 0:
                 dA_prev[i, :, :, :] = da_prev_pad[pad:-pad, pad:-pad, :]
             else:
                 dA_prev[i, :, :, :] = da_prev_pad[:, :, :]
 
         # Making sure your output shape is correct
         assert(dA_prev.shape == (m, n_H_prev, n_W_prev, n_C_prev))
-    
-        return np.array(dA_prev), np.array(dW), np.array(db)
+        #print("db: ", db) 
+        return np.array(dA_prev), np.array(dW), db
     def create_mask_from_window(self, x):
         """
         Creates a mask from an input matrix x, to identify the max entry of x.
@@ -506,15 +512,21 @@ class ConvulutionNeuralNetwork:
         pred = []
         #pass
         for ep in range(self.epoch):
+            amountlearn = 0
             for item_train in range(len(x)):
                 p = self.feedforward(np.array([x[item_train]]))
                 pred.append(p)
                 self.backpropogation(p, y[item_train])
+                amountlearn += 1
+                print("train passed: ", amountlearn, end="\r")
+            
+            amountlearn = 0
+            print("-------------------------")
             print("epoch: ", ep)
             print("loss: ", mse_loss(pred, y))
             pred.clear()
 
-ConvNetwork = ConvulutionNeuralNetwork(0.01, 10, 243, 40, 2)
+ConvNetwork = ConvulutionNeuralNetwork(0.01, 10, 243, 50, 2)
 #print("image.shape: ", np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]).shape)
 #arrayCats = [load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]
 #print("feed-forward", ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])))
