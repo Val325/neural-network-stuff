@@ -21,13 +21,18 @@ print("Files and directories in ", path_dogs_train, " len: ", len(dir_list_dog_t
 label_dog = np.array([0, 1])
 label_cat = np.array([1, 0])
 
+train_size = len(dir_list_cat_train) + len(dir_list_dog_train) 
+process_amount = 0
 
+train_size_backprop = 20
 train_dataset = []
 true_label = []
 
 #preprocessing.normalize()
 def load_image_numpy(path):
-    image = Image.open(path) 
+    global process_amount 
+    image = Image.open(path)
+    
     image = image.resize(cropimagesize)
     #image = ImageOps.grayscale(image)
     #image = (image-np.min(image))/(np.max(image)-np.min(image))
@@ -35,42 +40,48 @@ def load_image_numpy(path):
     #np.interp(image, (image.min(), image.max()), (0, +1))
     #image /= (np.max(image)/255.0)
     #return preprocessing.normalize(np.array(image))
+
     x_min = np.array(image).min(axis=(1, 2), keepdims=True)
     x_max = np.array(image).max(axis=(1, 2), keepdims=True)
 
     image = (np.array(image) - x_min)/(x_max-x_min)
+    #print("image: ", image)
+    process_amount += 1
+    print("loading: ",((process_amount / train_size_backprop) * 100),end="\r")
     return image
-"""
-for i in dir_list_sad_train:
-    if i.lower().endswith(('.png')):
-        dir_image = path_sad_train + "/" + i
-        image = Image.open(dir_image)
-        image = image.resize(cropimagesize)
-        #image = ImageOps.grayscale(image)
-        train_dataset.append(np.array(image).flatten())
-        true_label.append(label_sad)
 
-for i in dir_list_smile_train:
-    if i.lower().endswith(('.png')):
-        dir_image = path_smile_train + "/" + i
-        image = Image.open(dir_image)
-        image = image.resize(cropimagesize)
-        #image = ImageOps.grayscale(image)
-        train_dataset.append(np.array(image).flatten())
-        true_label.append(label_smile)
+for i in dir_list_cat_train:
+    if process_amount > (train_size_backprop / 2):
+        break
 
-print("len dataset: ", len(train_dataset))
-print("len label: ", len(true_label))
+    if i.lower().endswith(('.jpg')):
+        dir_image = path_cats_train + "/" + i
+        image = load_image_numpy(dir_image) #Image.open(dir_image)
+        train_dataset.append(np.array(image))
+        true_label.append(label_cat)
+
+for i in dir_list_dog_train:
+    if process_amount > train_size_backprop:
+        break
+
+    if i.lower().endswith(('.jpg')):
+        dir_image = path_dogs_train + "/" + i 
+        image = load_image_numpy(dir_image) #Image.open(dir_image)
+        train_dataset.append(np.array(image))
+        true_label.append(label_dog)
+
+#print("len dataset: ", len(train_dataset))
+#print("len label: ", len(true_label))
 
 amount = len(train_dataset) 
 # preprocessing.normalize()
 x_data = np.asarray(train_dataset)
-x_data = (x_data - np.min(x_data))/np.ptp(x_data)
+#x_data = (x_data - np.min(x_data))/np.ptp(x_data)
 y_data = np.asarray(true_label) 
-print("x_data.shape: ", x_data.shape)
-print("len(x_data[0]): ", len(x_data[0]))
-lenght_data = len(x_data[0]) 
-"""
+#print("x_data.shape: ", x_data.shape)
+#print("len(x_data[0]): ", len(x_data[0]))
+#lenght_data = len(x_data[0]) 
+
 class ConvulutionNeuralNetwork:
     def __init__(self, learning_rate, epochs, size_input, neuron_hidden, size_output):
 
@@ -79,6 +90,12 @@ class ConvulutionNeuralNetwork:
         self.size_input = size_input
         self.size_output = size_output
         self.num_neuron_hidden = neuron_hidden
+        
+        self.Wconv1 = np.random.randn(3, 5, 5, 3)
+        self.bconv1 = np.random.randn(3, 1, 1, 3)
+
+        self.Wconv2 = np.random.randn(3, 5, 5, 3)
+        self.bconv2 = np.random.randn(3, 1, 1, 3)
 
         self.w1 = np.array(np.random.randn(self.num_neuron_hidden, size_input) * 0.01, dtype=np.float64)
         self.w2 = np.array(np.random.randn(self.size_output, self.num_neuron_hidden) * 0.01, dtype=np.float64) 
@@ -155,7 +172,7 @@ class ConvulutionNeuralNetwork:
         # Save information in "cache" for the backprop
         cache = (layer_prev, W, b, hparameters)
     
-        return Z, cache
+        return np.array(Z), cache
     def pool_forward(self, A_prev, hparameters, mode = "max"):
         """
         Implements the forward pass of the pooling layer
@@ -210,7 +227,7 @@ class ConvulutionNeuralNetwork:
     
         # Making sure your output shape is correct
         assert(A.shape == (m, n_H, n_W, n_C))
-        return A, cache
+        return np.array(A), cache
     def conv_backward(self, dZ, cache):
         """
         Implement the backward propagation for a convolution function
@@ -232,10 +249,13 @@ class ConvulutionNeuralNetwork:
         (A_prev, W, b, hparameters) = cache
     
         # Retrieve dimensions from A_prev's shape
+        #print("A_prev.shape ", A_prev.shape)
         (m, n_H_prev, n_W_prev, n_C_prev) = A_prev.shape
     
         # Retrieve dimensions from W's shape
         (n_C, f, f, n_C_prev) = W.shape
+        #print("(n_C, f, f, n_C_prev)")
+        #print("W.shape: ", W.shape) 
     
         # Retrieve information from "hparameters"
         stride = hparameters["stride"]
@@ -243,16 +263,15 @@ class ConvulutionNeuralNetwork:
     
         # Retrieve dimensions from dZ's shape
         (m, n_H, n_W, n_C) = dZ.shape
-    
+        #print("dZ.shape: ", dZ.shape)  
         # Initialize dA_prev, dW, db with the correct shapes
         dA_prev = np.zeros((m, n_H_prev, n_W_prev, n_C_prev))                           
-        dW = np.zeros((f, f, n_C_prev, n_C))
+        dW = np.zeros((n_C, f, f, n_C_prev))
         db = np.zeros((1, 1, 1, n_C))
 
         # Pad A_prev and dA_prev
         A_prev_pad = self.zero_pad(A_prev, pad)
         dA_prev_pad = self.zero_pad(dA_prev, pad)
-    
         for i in range(m):                       # loop over the training examples
         
             # select ith training example from A_prev_pad and dA_prev_pad
@@ -280,7 +299,7 @@ class ConvulutionNeuralNetwork:
                         #print("dZ.shape: ", dZ.shape)
 
                         da_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :] += W[c] * dZ[i, h, w, c]
-                        dW[:,:,:,c] += np.array(a_slice, dtype=float) * np.array(dZ[i, h, w, c], dtype=float)
+                        dW[c] += np.array(a_slice, dtype=float) * np.array(dZ[i, h, w, c], dtype=float)
                         db[:,:,:,c] += dZ[i, h, w, c]
                     
             # Set the ith training example's dA_prev to the unpaded da_prev_pad (Hint: use X[pad:-pad, pad:-pad, :])
@@ -292,7 +311,7 @@ class ConvulutionNeuralNetwork:
         # Making sure your output shape is correct
         assert(dA_prev.shape == (m, n_H_prev, n_W_prev, n_C_prev))
     
-        return dA_prev, dW, db
+        return np.array(dA_prev), np.array(dW), np.array(db)
     def create_mask_from_window(self, x):
         """
         Creates a mask from an input matrix x, to identify the max entry of x.
@@ -344,14 +363,16 @@ class ConvulutionNeuralNetwork:
     
     
         # Retrieve information from cache (≈1 line)
+        
         (A_prev, hparameters) = cache
-    
+        #print("A_prev: ", A_prev.shape) 
         # Retrieve hyperparameters from "hparameters" (≈2 lines)
         stride = hparameters["stride"]
         f = hparameters["f"]
     
         # Retrieve dimensions from A_prev's shape and dA's shape (≈2 lines)
         m, n_H_prev, n_W_prev, n_C_prev = A_prev.shape
+        #print("dA.shape: ", dA.shape)
         m, n_H, n_W, n_C = dA.shape
     
         # Initialize dA_prev with zeros (≈1 line)
@@ -388,22 +409,21 @@ class ConvulutionNeuralNetwork:
                          
         # Making sure your output shape is correct
         assert(dA_prev.shape == A_prev.shape)
-    
-        return dA_prev
+         
+        return np.array(dA_prev)
 
     def feedforward(self, x):
         hparameters = {
             "pad" : 0,
             "stride": 1
         }
-        Wconv1 = np.random.randn(3, 5, 5, 3)
-        bconv1 = np.random.randn(3, 1, 1, 1)
-        Conv1layer1 = self.convulution(x, Wconv1, bconv1, hparameters)
-
+        
+        Conv1layer1, conv1_cache = self.convulution(x, self.Wconv1, self.bconv1, hparameters)
+        self.conv1_cache = conv1_cache
         #Wconv2 = np.random.randn(3, 5, 5, 3)
         #bconv2 = np.random.randn(3, 1, 1, 1)
         #Conv2layer1 = self.convulution(x, Wconv2, bconv2, hparameters)
-        print("Conv1: ", np.array(Conv1layer1[0]).shape)
+        #print("Conv1: ", np.array(Conv1layer1).shape)
         #print("Conv2: ", np.array(Conv2layer1[0]).shape)
 
         #print("Conv[1][0]: ", np.array(Conv1[1][0]).shape)
@@ -414,18 +434,19 @@ class ConvulutionNeuralNetwork:
             "f" : 2,
             "stride": 2
         }
-        pool1 = self.pool_forward( np.array(Conv1layer1[0], dtype=object), hparameters, "max")
-        print("pool1.shape: ", np.array(pool1[0], dtype=object).shape)
+        pool1, pool1_cache = self.pool_forward( np.array(Conv1layer1, dtype=object), hparameters, "max")
+        self.pool1_shape = pool1.shape 
+        self.pool1_cacheBprop = pool1_cache 
+        #print("pool1.shape: ", np.array(pool1, dtype=object).shape)
         
         hparameters = {
             "pad" : 0,
             "stride": 1
         }
-        W2 = np.random.randn(3, 5, 5, 3)
-        b2 = np.random.randn(3, 1, 1, 1)
-        Conv2, conv2_cache = self.convulution(np.array(pool1[0], dtype=object), W2, b2, hparameters)
+
+        Conv2, conv2_cache = self.convulution(np.array(pool1, dtype=object), self.Wconv2, self.bconv2, hparameters)
         self.conv2_cache = conv2_cache 
-        print("Conv2.shape: ", np.array(Conv2[0], dtype=object).shape)
+        #print("Conv2.shape: ", np.array(Conv2, dtype=object).shape)
         hparameters = {
             "f" : 2,
             "stride": 2
@@ -433,11 +454,11 @@ class ConvulutionNeuralNetwork:
         pool2, pool2_cache = self.pool_forward( np.array(Conv2, dtype=object), hparameters, "max")
         self.pool2_shape = pool2.shape 
         self.pool2_cacheBprop = pool2_cache 
-        print("pool2.shape: ", np.array(pool2[0], dtype=object).shape)
-        print("Flatten: ", np.array(pool2[0], dtype=object).flatten().shape)
+        #print("pool2.shape: ", np.array(pool2, dtype=object).shape)
+        #print("Flatten: ", np.array(pool2, dtype=object).flatten().shape)
         self.input_data = x
-        self.cache_shape_flat = np.array(pool2[0], dtype=object).flatten().shape 
-        self.z1 = np.array(np.dot(self.w1, np.array(pool2[0], dtype=object).flatten()) + self.b1,dtype=np.float32)
+        self.cache_shape_flat = np.array(pool2, dtype=object).flatten().shape 
+        self.z1 = np.array(np.dot(self.w1, np.array(pool2, dtype=object).flatten()) + self.b1,dtype=np.float32)
         self.sigmoid_hidden = sigmoid(self.z1)
         self.z2 = np.dot(self.w2, self.sigmoid_hidden) + self.b2
         self.sigmoid_output = softmax(self.z2)
@@ -455,29 +476,49 @@ class ConvulutionNeuralNetwork:
         grad_b1 = delta_input 
 
         poolbackward2 = self.pool_backward(grad_w1_upd.reshape(self.pool2_shape), self.pool2_cacheBprop, "max") 
-        print("poolbackward2.shape: ", poolbackward2.shape)
-        conv2back = self.conv_backward(poolbackward2, self.conv2_cache)
+        #print("poolbackward2.shape: ", poolbackward2.shape)
+        conv2back, grad_W_conv2, grad_b_conv2 = self.conv_backward(poolbackward2, self.conv2_cache)
         #conv2back = np.array([conv2back])
-        print("conv2back.shape: ", np.array(conv2back, dtype=object)[0].shape)
+        #print("conv2back: ", np.array(conv2back, dtype=object).shape)
+        poolbackward1 = self.pool_backward(np.array(conv2back, dtype=object), self.pool1_cacheBprop, "max")
+        #print("poolbackward1.shape: ", poolbackward1.shape)
+        
+        conv1back, grad_W_conv1, grad_b_conv1 = self.conv_backward(poolbackward1, self.conv1_cache)
+
         #Gradient descend
-        self.w2 -= self.learn_rate * grad_w2 
-        self.b2 -= self.learn_rate * grad_b2
+        self.w2 -= self.learn_rate * grad_w2.astype('float32') 
+        self.b2 -= self.learn_rate * grad_b2.astype('float32')
 
         #Gradient descend        
-        self.w1 -= self.learn_rate * grad_w1 
-        self.b1 -= self.learn_rate * grad_b1 
+        self.w1 -= self.learn_rate * grad_w1.astype('float32') 
+        self.b1 -= self.learn_rate * grad_b1.astype('float32')
+        
+        #print("grad_b_conv1: ", grad_b_conv1.shape)
+        #print("self.bconv1: ", self.bconv1.shape)
+
+        self.Wconv1 -= self.learn_rate * grad_W_conv1.astype('float32') 
+        self.bconv1 -= self.learn_rate * grad_b_conv1.T.astype('float32') 
+
+        self.Wconv2 = self.learn_rate * grad_W_conv2.astype('float32') 
+        self.bconv2 = self.learn_rate * grad_b_conv2.astype('float32') 
 
     def train(self, x, y):
-        self.backpropogation(x, y)
+        pred = []
         #pass
-        #for ep in range(self.epoch):
-            
+        for ep in range(self.epoch):
+            for item_train in range(len(x)):
+                p = self.feedforward(np.array([x[item_train]]))
+                pred.append(p)
+                self.backpropogation(p, y[item_train])
+            print("epoch: ", ep)
+            print("loss: ", mse_loss(pred, y))
+            pred.clear()
 
 ConvNetwork = ConvulutionNeuralNetwork(0.01, 10, 243, 40, 2)
-print("image.shape: ", np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]).shape)
+#print("image.shape: ", np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]).shape)
 #arrayCats = [load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]
 #print("feed-forward", ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])))
-ConvNetwork.train(ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])), label_cat)
+ConvNetwork.train(np.array(train_dataset, dtype=object), np.array(true_label, dtype=object))
 #ConvNetwork.feedforward()
 #np.random.seed(1)
 #A_prev = np.random.randn(10, 4, 4, 3)
