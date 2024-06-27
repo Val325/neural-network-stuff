@@ -7,8 +7,9 @@ import random
 from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
+from scipy.ndimage import rotate
 cropimagesize = (48, 48)
-
+#rotate(x, angle=180)
 path_cats_train = "dataset/training_set/training_set/cats"
 path_dogs_train = "dataset/training_set/training_set/dogs"
 
@@ -24,16 +25,16 @@ label_cat = np.array([1, 0])
 train_size = len(dir_list_cat_train) + len(dir_list_dog_train) 
 process_amount = 0
 
-train_size_backprop = 150
+train_size_backprop = 1500
 train_dataset = []
 true_label = []
+broken_image = 0
 
 #preprocessing.normalize()
 def load_image_numpy(path):
     global process_amount 
     image = Image.open(path)
     image = image.resize(cropimagesize)
-
     #image = ImageOps.grayscale(image)
     #image = (image-np.min(image))/(np.max(image)-np.min(image))
     #image = (image - np.min(image))/np.ptp(image)
@@ -57,9 +58,10 @@ for i in dir_list_cat_train:
     if i.lower().endswith(('.jpg')):
         dir_image = path_cats_train + "/" + i
         image = load_image_numpy(dir_image) #Image.open(dir_image)
-        
-
-
+        if np.isnan(image).any():
+            broken_image += 1
+            continue
+    
         train_dataset.append(np.array(image))
         true_label.append(label_cat)
 
@@ -70,7 +72,9 @@ for i in dir_list_dog_train:
     if i.lower().endswith(('.jpg')):
         dir_image = path_dogs_train + "/" + i 
         image = load_image_numpy(dir_image) #Image.open(dir_image)
-
+        if np.isnan(image).any():
+            broken_image += 1
+            continue
         
         train_dataset.append(np.array(image))
         true_label.append(label_dog)
@@ -303,9 +307,9 @@ class ConvulutionNeuralNetwork:
                         #print("da_prev_pad.shape: ", da_prev_pad.shape)
                         #print("W.shape: ", W.shape)
                         #print("dZ.shape: ", dZ.shape)
-
+                        #rotate(x, angle=180)
                         da_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :] += W[c] * dZ[i, h, w, c]
-                        dW[c] += np.array(a_slice, dtype=float) * np.array(dZ[i, h, w, c], dtype=float)
+                        dW[c] += rotate(np.array(a_slice, dtype=float), angle=180) * np.array(dZ[i, h, w, c], dtype=float)
                         db[:,:,:,c] += dZ[i, h, w, c]
                     
             # Set the ith training example's dA_prev to the unpaded da_prev_pad (Hint: use X[pad:-pad, pad:-pad, :])
@@ -524,9 +528,12 @@ class ConvulutionNeuralNetwork:
             print("-------------------------")
             print("epoch: ", ep)
             print("loss: ", mse_loss(pred, y))
+            print("cat prob: ", self.feedforward(np.array([load_image_numpy("dataset/test_set/test_set/cats/cat.4001.jpg")])))
+            print("dog prob: ", self.feedforward(np.array([load_image_numpy("dataset/test_set/test_set/dogs/dog.4001.jpg")])))
+
             pred.clear()
 
-ConvNetwork = ConvulutionNeuralNetwork(0.01, 10, 243, 50, 2)
+ConvNetwork = ConvulutionNeuralNetwork(0.1, 10, 243, 100, 2)
 #print("image.shape: ", np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]).shape)
 #arrayCats = [load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]
 #print("feed-forward", ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])))
