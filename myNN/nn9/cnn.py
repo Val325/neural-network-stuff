@@ -25,7 +25,7 @@ label_cat = np.array([1, 0])
 train_size = len(dir_list_cat_train) + len(dir_list_dog_train) 
 process_amount = 0
 
-train_size_backprop = 1500
+train_size_backprop = 300
 train_dataset = []
 true_label = []
 broken_image = 0
@@ -173,7 +173,7 @@ class ConvulutionNeuralNetwork:
                         # Use the corners to define the (3D) slice of a_prev_pad (See Hint above the cell). (≈1 line)
                         a_slice_prev = a_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :]
                         # Convolve the (3D) slice with the correct filter W and bias b, to get back one output neuron. (≈1 line)
-                        Z[i, h, w, c] = np.sum(np.multiply(a_slice_prev, W[c]) + b) 
+                        Z[i, h, w, c] = np.sum(np.multiply(a_slice_prev, W[c].T) + b) 
                                         
 
         # Making sure your output shape is correct
@@ -250,7 +250,7 @@ class ConvulutionNeuralNetwork:
         dA_prev -- gradient of the cost with respect to the input of the conv layer (A_prev),
                numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
         dW -- gradient of the cost with respect to the weights of the conv layer (W)
-          numpy array of shape (f, f, n_C_prev, n_C)
+          numpy array of shape (n_C, f, f, n_C_prev)
         db -- gradient of the cost with respect to the biases of the conv layer (b)
           numpy array of shape (1, 1, 1, n_C)
         """
@@ -427,7 +427,7 @@ class ConvulutionNeuralNetwork:
             "pad" : 0,
             "stride": 1
         }
-        
+        #print("x: ", x.shape) 
         Conv1layer1, conv1_cache = self.convulution(x, self.Wconv1, self.bconv1, hparameters)
         self.conv1_cache = conv1_cache
         #Wconv2 = np.random.randn(3, 5, 5, 3)
@@ -505,12 +505,13 @@ class ConvulutionNeuralNetwork:
         
         #print("grad_b_conv1: ", grad_b_conv1.shape)
         #print("self.bconv1: ", self.bconv1.shape)
+        self.Wconv2 = self.learn_rate * grad_W_conv2.astype('float32') 
+        self.bconv2 = self.learn_rate * grad_b_conv2.astype('float32') 
 
         self.Wconv1 -= self.learn_rate * grad_W_conv1.astype('float32') 
         self.bconv1 -= self.learn_rate * grad_b_conv1.T.astype('float32') 
 
-        self.Wconv2 = self.learn_rate * grad_W_conv2.astype('float32') 
-        self.bconv2 = self.learn_rate * grad_b_conv2.astype('float32') 
+
 
     def train(self, x, y):
         pred = []
@@ -533,7 +534,7 @@ class ConvulutionNeuralNetwork:
 
             pred.clear()
 
-ConvNetwork = ConvulutionNeuralNetwork(0.1, 10, 243, 100, 2)
+ConvNetwork = ConvulutionNeuralNetwork(0.1, 10, 243, 10, 2)
 #print("image.shape: ", np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]).shape)
 #arrayCats = [load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]
 #print("feed-forward", ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])))
