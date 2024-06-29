@@ -8,8 +8,9 @@ from PIL import Image, ImageOps
 import matplotlib.pyplot as plt
 from sklearn import preprocessing
 from scipy.ndimage import rotate
+
 cropimagesize = (48, 48)
-#rotate(x, angle=180)
+
 path_cats_train = "dataset/training_set/training_set/cats"
 path_dogs_train = "dataset/training_set/training_set/dogs"
 
@@ -79,18 +80,10 @@ for i in dir_list_dog_train:
         train_dataset.append(np.array(image))
         true_label.append(label_dog)
 
-#print("len dataset: ", len(train_dataset))
-#print("len label: ", len(true_label))
 
 amount = len(train_dataset) 
-# preprocessing.normalize()
-
 x_data = np.asarray(train_dataset)
-#x_data = (x_data - np.min(x_data))/np.ptp(x_data)
-y_data = np.asarray(true_label) 
-#print("x_data.shape: ", x_data.shape)
-#print("len(x_data[0]): ", len(x_data[0]))
-#lenght_data = len(x_data[0]) 
+y_data = np.asarray(true_label)
 
 class ConvulutionNeuralNetwork:
     def __init__(self, learning_rate, epochs, size_input, neuron_hidden, size_output):
@@ -100,11 +93,14 @@ class ConvulutionNeuralNetwork:
         self.size_input = size_input
         self.size_output = size_output
         self.num_neuron_hidden = neuron_hidden
-        
-        self.Wconv1 = np.random.randn(3, 5, 5, 3)
+        """
+           convW - (num_conv, filterX, filterY, channels) 
+           convB - (num_conv, 1, 1, 1) 
+        """
+        self.Wconv1 = np.random.randn(3, 3, 5, 5)
         self.bconv1 = np.random.randn(3, 1, 1, 1)
 
-        self.Wconv2 = np.random.randn(3, 5, 5, 3)
+        self.Wconv2 = np.random.randn(3, 3, 5, 5)
         self.bconv2 = np.random.randn(3, 1, 1, 1)
 
         self.w1 = np.array(np.random.randn(self.num_neuron_hidden, size_input) * 0.01, dtype=np.float64)
@@ -112,6 +108,7 @@ class ConvulutionNeuralNetwork:
 
         self.b1 = np.array(np.zeros((self.num_neuron_hidden)), dtype=np.float64)
         self.b2 = np.array(np.zeros((self.size_output)), dtype=np.float64)
+
     def zero_pad(self, X, pad):
         """
         Pad with zeros all images of the dataset X. The padding is applied to the height and width of an image, 
@@ -124,6 +121,7 @@ class ConvulutionNeuralNetwork:
         Returns:
         X_pad -- padded image of shape (m, n_H + 2*pad, n_W + 2*pad, n_C)
         """
+    
         X_pad = np.pad(X, ((0, 0), (pad, pad), (pad, pad), (0, 0)), 'constant', constant_values=0)
         return X_pad
     def convulution(self, layer_prev, W, b, hparameters):
@@ -132,7 +130,7 @@ class ConvulutionNeuralNetwork:
     
         Arguments:
         A_prev -- output activations of the previous layer, numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
-        W -- Weights, numpy array of shape (C, f, f, n_C_prev)
+        W -- Weights, numpy array of shape (numConv, channels, f, f)
         b -- Biases, numpy array of shape (n_C, 1, 1, 1)
         hparameters -- python dictionary containing "stride" and "pad"
         
@@ -140,13 +138,14 @@ class ConvulutionNeuralNetwork:
         Z -- conv output, numpy array of shape (m, n_H, n_W, n_C)
         cache -- cache of values needed for the conv_backward() function
         """
-    
-        # Retrieve dimensions from A_prev's shape (≈1 line)  
-        (m, n_H_prev, n_W_prev, n_C_prev) = layer_prev.shape
-        #print("b.shape: ", b.shape)
-        #print("W.shape: ", W.shape)
+        print("layer_prev.shape: ", layer_prev.shape)
+        print("layer_prev.ndim: ", layer_prev.ndim)
+        # Retrieve dimensions from A_prev's shape (≈1 line)
+        if 
+        (convN, m, n_H_prev, n_W_prev, n_C_prev) = layer_prev.shape
+
         # Retrieve dimensions from W's shape (≈1 line)
-        (n_C, f, f, n_C_prev) = W.shape
+        (numConv, channels, f, f) = W.shape
         # Retrieve information from "hparameters" (≈2 lines)
         stride = hparameters['stride']
         pad = hparameters['pad']  
@@ -155,29 +154,30 @@ class ConvulutionNeuralNetwork:
         n_W = int((n_W_prev - f + 2 * pad) / stride) + 1
     
         # Initialize the output volume Z with zeros. (≈1 line)
-        Z = np.zeros((m, n_H, n_W, n_C))
+        Z = np.zeros((numConv, m, n_H, n_W, channels))
 
         # Create A_prev_pad by padding A_prev
         A_prev_pad = self.zero_pad(layer_prev, pad)
     
         for i in range(m):                                 # loop over the batch of training examples
             a_prev_pad = A_prev_pad[i]                     # Select ith training example's padded activation
-            for h in range(n_H):                           # loop over vertical axis of the output volume
-                for w in range(n_W):                       # loop over horizontal axis of the output volume
-                    for c in range(n_C):                   # loop over channels (= #filters) of the output volume
-                        # Find the corners of the current "slice" (≈4 lines)
-                        vert_start = h * stride
-                        vert_end = vert_start + f
-                        horiz_start = w * stride
-                        horiz_end = horiz_start + f
-                        # Use the corners to define the (3D) slice of a_prev_pad (See Hint above the cell). (≈1 line)
-                        a_slice_prev = a_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :]
-                        # Convolve the (3D) slice with the correct filter W and bias b, to get back one output neuron. (≈1 line)
-                        Z[i, h, w, c] = np.sum(np.multiply(a_slice_prev, W[c].T) + b) 
+            for conv in range(numConv):
+                for h in range(n_H):                           # loop over vertical axis of the output volume
+                    for w in range(n_W):                       # loop over horizontal axis of the output volume
+                        for c in range(n_C_prev):                   # loop over channels (= #filters) of the output volume
+                            # Find the corners of the current "slice" (≈4 lines)
+                            vert_start = h * stride
+                            vert_end = vert_start + f
+                            horiz_start = w * stride
+                            horiz_end = horiz_start + f
+                            # Use the corners to define the (3D) slice of a_prev_pad (See Hint above the cell). (≈1 line)
+                            a_slice_prev = a_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :]
+                            # Convolve the (3D) slice with the correct filter W and bias b, to get back one output neuron. (≈1 line)
+                            Z[conv, i, h, w, c] = np.sum(np.multiply(a_slice_prev, W[conv].T) + b[conv]) 
                                         
 
         # Making sure your output shape is correct
-        assert(Z.shape == (m, n_H, n_W, n_C))
+        #assert(Z.shape == (m, n_H, n_W, n_C))
     
         # Save information in "cache" for the backprop
         cache = (layer_prev, W, b, hparameters)
@@ -188,7 +188,7 @@ class ConvulutionNeuralNetwork:
         Implements the forward pass of the pooling layer
     
         Arguments:
-        A_prev -- Input data, numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
+        A_prev -- Input data, numpy array of shape (convNum, m, n_H_prev, n_W_prev, n_C_prev)
         hparameters -- python dictionary containing "f" and "stride"
         mode -- the pooling mode you would like to use, defined as a string ("max" or "average")
     
@@ -196,8 +196,9 @@ class ConvulutionNeuralNetwork:
         A -- output of the pool layer, a numpy array of shape (m, n_H, n_W, n_C)
         cache -- cache used in the backward pass of the pooling layer, contains the input and hparameters 
         """
+        print("A_prev.shape: ", A_prev.shape)
         # Retrieve dimensions from the input shape
-        (m, n_H_prev, n_W_prev, n_C_prev) = A_prev.shape
+        (convNum, m, n_H_prev, n_W_prev, n_C_prev) = A_prev.shape
     
         # Retrieve hyperparameters from "hparameters"
         f = hparameters["f"]
@@ -209,50 +210,51 @@ class ConvulutionNeuralNetwork:
         n_C = n_C_prev
     
         # Initialize output matrix A
-        A = np.zeros((m, n_H, n_W, n_C))              
-    
+        A = np.zeros((convNum, m, n_H, n_W, n_C))              
+         
         for i in range(m):                           # loop over the training examples
-            for h in range(n_H):                     # loop on the vertical axis of the output volume
-                for w in range(n_W):                 # loop on the horizontal axis of the output volume
-                    for c in range (n_C):            # loop over the channels of the output volume
+            for conv in range(convNum):
+                for h in range(n_H):                     # loop on the vertical axis of the output volume
+                    for w in range(n_W):                 # loop on the horizontal axis of the output volume
+                        for c in range (n_C):            # loop over the channels of the output volume
                     
-                        # Find the corners of the current "slice" (≈4 lines)
-                        vert_start = h * stride
-                        vert_end = vert_start + f
-                        horiz_start = w * stride
-                        horiz_end = horiz_start + f
+                            # Find the corners of the current "slice" (≈4 lines)
+                            vert_start = h * stride
+                            vert_end = vert_start + f
+                            horiz_start = w * stride
+                            horiz_end = horiz_start + f
                     
-                        # Use the corners to define the current slice on the ith training example of A_prev, channel c. (≈1 line)
-                        a_prev_slice = A_prev[i, vert_start:vert_end, horiz_start:horiz_end, c]
+                            # Use the corners to define the current slice on the ith training example of A_prev, channel c. (≈1 line)
+                            a_prev_slice = A_prev[conv,i, vert_start:vert_end, horiz_start:horiz_end, c]
                     
-                        # Compute the pooling operation on the slice. Use an if statment to differentiate the modes. Use np.max/np.mean.
-                        if mode == "max":
-                            A[i, h, w, c] = np.max(a_prev_slice)
-                        elif mode == "average":
-                            A[i, h, w, c] = np.mean(a_prev_slice)
+                            # Compute the pooling operation on the slice. Use an if statment to differentiate the modes. Use np.max/np.mean.
+                            if mode == "max":
+                                A[conv, i, h, w, c] = np.max(a_prev_slice)
+                            elif mode == "average":
+                                A[conv, i, h, w, c] = np.mean(a_prev_slice)
     
     
         # Store the input and hparameters in "cache" for pool_backward()
         cache = (A_prev, hparameters)
     
         # Making sure your output shape is correct
-        assert(A.shape == (m, n_H, n_W, n_C))
+        #assert(A.shape == (m, n_H, n_W, n_C))
         return np.array(A), cache
     def conv_backward(self, dZ, cache):
         """
         Implement the backward propagation for a convolution function
     
         Arguments:
-        dZ -- gradient of the cost with respect to the output of the conv layer (Z), numpy array of shape (m, n_H, n_W, n_C)
+        dZ -- gradient of the cost with respect to the output of the conv layer (Z), numpy array of shape (numConv, channels, f, f)
         cache -- cache of values needed for the conv_backward(), output of conv_forward()
     
         Returns:
         dA_prev -- gradient of the cost with respect to the input of the conv layer (A_prev),
                numpy array of shape (m, n_H_prev, n_W_prev, n_C_prev)
         dW -- gradient of the cost with respect to the weights of the conv layer (W)
-          numpy array of shape (n_C, f, f, n_C_prev)
+          numpy array of shape (numConv, channels, f, f)
         db -- gradient of the cost with respect to the biases of the conv layer (b)
-          numpy array of shape (1, 1, 1, n_C)
+          numpy array of shape (channels, 1, 1, 1)
         """
     
         # Retrieve information from "cache"
@@ -263,7 +265,7 @@ class ConvulutionNeuralNetwork:
         (m, n_H_prev, n_W_prev, n_C_prev) = A_prev.shape
     
         # Retrieve dimensions from W's shape
-        (n_C, f, f, n_C_prev) = W.shape
+        (numConv, channels, f, f) = W.shape
         #print("(n_C, f, f, n_C_prev)")
         #print("W.shape: ", W.shape) 
     
@@ -276,41 +278,49 @@ class ConvulutionNeuralNetwork:
         #print("dZ.shape: ", dZ.shape)  
         # Initialize dA_prev, dW, db with the correct shapes
         dA_prev = np.zeros((m, n_H_prev, n_W_prev, n_C_prev))                           
-        dW = np.zeros((n_C, f, f, n_C_prev))
-        db = np.zeros((1, 1, 1, n_C))
+        dW = np.zeros((numConv, channels, f, f))
+        db = np.zeros((n_C, 1, 1, 1))
 
         # Pad A_prev and dA_prev
         A_prev_pad = self.zero_pad(A_prev, pad)
         dA_prev_pad = self.zero_pad(dA_prev, pad)
+        print("m: ", m)
+        print("numConv: ", numConv)
+        print("n_H", n_H)
+        print("n_W", n_W)
+        print("n_C", n_C)
+
         for i in range(m):                       # loop over the training examples
-        
-            # select ith training example from A_prev_pad and dA_prev_pad
-            a_prev_pad = A_prev_pad[i]
-            da_prev_pad = dA_prev_pad[i]
-        
-            for h in range(n_H):                   # loop over vertical axis of the output volume
-                for w in range(n_W):               # loop over horizontal axis of the output volume
-                    for c in range(n_C):           # loop over the channels of the output volume
-                    
-                        # Find the corners of the current "slice"
-                        vert_start = h * stride
+            for conv in range(numConv): 
+                # select ith training example from A_prev_pad and dA_prev_pad
+                a_prev_pad = A_prev_pad[i]
+                da_prev_pad = dA_prev_pad[i]
+                for h in range(n_H):                   # loop over vertical axis of the output volume
+                    for w in range(n_W):               # loop over horizontal axis of the output volume
+                        for c in range(n_C):           # loop over the channels of the output volume
+                        
+                            # Find the corners of the current "slice"
+                            vert_start = h * stride
 
-                        vert_end = vert_start + f
-                        horiz_start = w * stride
+                            vert_end = vert_start + f
+                            horiz_start = w * stride
 
-                        horiz_end = horiz_start + f
-                    
-                        # Use the corners to define the slice from a_prev_pad
-                        a_slice = a_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :]
+                            horiz_end = horiz_start + f
+                            #print("vert_start: ", vert_start)
+                            #print("horiz_end: ", horiz_end)
+                            # Use the corners to define the slice from a_prev_pad
+                            a_slice = a_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :]
 
-                        # Update gradients for the window and the filter's parameters using the code formulas given above
-                        #print("da_prev_pad.shape: ", da_prev_pad.shape)
-                        #print("W.shape: ", W.shape)
-                        #print("dZ.shape: ", dZ.shape)
-                        #rotate(x, angle=180)
-                        da_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :] += W[c].T * dZ[i, h, w, c]
-                        dW[c] += rotate(np.array(a_slice, dtype=float), angle=180) * np.array(dZ[i, h, w, c], dtype=float)
-                        db[:,:,:,c] += dZ[i, h, w, c]
+                            # Update gradients for the window and the filter's parameters using the code formulas given above
+                            #print("da_prev_pad.shape: ", da_prev_pad.shape)
+                            #print("W.shape: ", W.shape)
+                            #print("dZ.shape: ", dZ.shape)
+                            #rotate(x, angle=180)
+                            if horiz_end <= n_W and vert_end <= n_H: 
+                                da_prev_pad[vert_start:vert_end, horiz_start:horiz_end, :] += W[conv].T *dZ[i, h, w, c]
+                                dW[conv] += rotate(np.array(a_slice, dtype=float), angle=180).T * np.array(dZ[i, h, w, c], dtype=float)
+                                #image_conv.shape:  (1, 48, 48, 3)
+                                db[conv] += dZ[i, h, w, c]
                     
             # Set the ith training example's dA_prev to the unpaded da_prev_pad (Hint: use X[pad:-pad, pad:-pad, :])
             if pad != 0:
@@ -519,6 +529,7 @@ class ConvulutionNeuralNetwork:
         for ep in range(self.epoch):
             amountlearn = 0
             for item_train in range(len(x)):
+                print("x: ", np.array([x[item_train]]).shape)
                 p = self.feedforward(np.array([x[item_train]]))
                 pred.append(p)
                 self.backpropogation(p, y[item_train])
@@ -534,52 +545,35 @@ class ConvulutionNeuralNetwork:
 
             pred.clear()
 
+#(numConv, channels, f, f)
+#Wconv = np.random.randn(3, 3, 5, 5)
+#(numConv, 1, 1, 1)
+#bconv = np.random.randn(3, 1, 1, 1)
+"""
+hparameters = {
+    "pad" : 0,
+    "stride": 1
+}
+"""
+#np.array([load_image_numpy("dataset/test_set/test_set/cats/cat.4001.jpg")])
+#print("train_dataset len: ", len(train_dataset))
+#print("true_label len: ", len(true_label))
 ConvNetwork = ConvulutionNeuralNetwork(0.1, 10, 243, 10, 2)
-#print("image.shape: ", np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]).shape)
-#arrayCats = [load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")]
-#print("feed-forward", ConvNetwork.feedforward(np.array([load_image_numpy("dataset/training_set/training_set/cats/cat.1.jpg")])))
-ConvNetwork.train(np.array(train_dataset, dtype=object), np.array(true_label, dtype=object))
-#ConvNetwork.feedforward()
-#np.random.seed(1)
-#A_prev = np.random.randn(10, 4, 4, 3)
-#W = np.random.randn(8, 2, 2, 3)
-#b = np.random.randn(8, 1, 1, 1)
-#hparameters = {"pad" : 2,
-#               "stride": 1}
-#Z, cache_conv = ConvNetwork.convulution(A_prev, W, b, hparameters) 
-#print("Z.shape =", Z.shape)
-#print("cache_conv[0][1][2][3] =", cache_conv[0][1][2][3])
-#hparameters_pool = {"stride" : 1, "f": 4}
-#A, cache = ConvNetwork.pool_forward(Z, hparameters_pool)
-#print("mode = max")
-#print("A =", A)
-#print()
+ConvNetwork.train(x_data, y_data)
+#image_conv = np.array([load_image_numpy("dataset/test_set/test_set/cats/cat.4001.jpg")])
+#print("image_conv.shape: ", np.array(image_conv).shape)
+#convData, convBackprop = ConvNetwork.convulution(image_conv, Wconv, bconv, hparameters)
+#grad_conv, gradW, gradb = ConvNetwork.conv_backward(image_conv, convBackprop)
+#print("conv.shape: ", np.array(convData)[0][0].shape)
+#print("conv len: ", len(convData))
+#data = Image.fromarray(np.array(convData, dtype=np.uint8)[0][0])
+#data2 = Image.fromarray(np.array(convData, dtype=np.uint8)[1][0])
+#data3 = Image.fromarray(np.array(convData, dtype=np.uint8)[2][0])
+#data.save("convolution/conv_pic1.png") 
+#data2.save("convolution/conv_pic2.png") 
+#data3.save("convolution/conv_pic3.png") 
 
-#A, cache = ConvNetwork.pool_forward(Z, hparameters_pool, mode = "average")
-#print("mode = average")
-#print("A =", A)
-
-#dA, dW, db = ConvNetwork.conv_backward(Z, cache_conv)
-#print("dA_mean =", np.mean(dA))
-#print("dW_mean =", np.mean(dW))
-#print("db_mean =", np.mean(db))
-
-#x = np.random.randn(2,3)
-#mask = ConvNetwork.create_mask_from_window(x)
-#print('x = ', x)
-#print("mask = ", mask)
-
-#A_prev = np.random.randn(5, 5, 3, 2)
-#hparameters = {"stride" : 1, "f": 2}
-#A, cache = ConvNetwork.pool_forward(A_prev, hparameters)
-#dA = np.random.randn(5, 4, 2, 2)
-
-#dA_prev = ConvNetwork.pool_backward(dA, cache, "max")
-#print("mode = max")
-#print('mean of dA = ', np.mean(dA))
-#print('dA_prev[1,1] = ', dA_prev[1,1])  
-#print()
-#dA_prev = ConvNetwork.pool_backward(dA, cache, "average")
-#print("mode = average")
-#print('mean of dA = ', np.mean(dA))
-#print('dA_prev[1,1] = ', dA_prev[1,1])
+#grad Wconv (3, 3, 5, 5)
+#print("convBackprop.shape: ", np.array(convBackprop[1]).shape)
+#print("grad_conv_image", grad_conv.shape)
+#print("grad_conv_w", gradW.shape)
