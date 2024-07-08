@@ -10,6 +10,13 @@ class Matrix {
     int height;
     int width;
     int matrixSize;
+  Matrix(){}
+  Matrix(std::vector<std::vector<double>> mat_inside){
+    mat = mat_inside; 
+    height = mat_inside.size();
+    width = mat_inside[0].size();
+    matrixSize = height * width;
+  }
   void setMatrix(std::vector<std::vector<double>> mat_inside){
     mat = mat_inside; 
     height = mat_inside.size();
