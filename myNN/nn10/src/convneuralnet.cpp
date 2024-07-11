@@ -24,23 +24,31 @@ int main(){
         {4, 4, 4, 4}
     };
     std::vector<std::vector<double>> matrix4x1 = {
-        {2, 4, 4, 2},
-        {2, 4, 4, 2},
-        {2, 4, 4, 2},
-        {2, 4, 4, 2},
+        {1, 2, 3, 4},
+        {5, 6, 7, 8},
+        {9, 10, 11, 12},
+        {13, 14, 15, 16},
     };
-    Matrix matqqw;
-    matqqw.setMatrix(matrix4x4);
-    Matrix matone;
-    matone.setMatrix(matrix4x1);
-    std::cout << matone << std::endl;
+    std::vector<std::vector<double>> matrixKonv = {
+        {2, 4, 4, 2, 1},
+        {2, 4, 4, 2, 1},
+        {2, 4, 4, 2, 1},
+        {2, 4, 4, 2, 1},
+        {2, 4, 4, 2, 1},
+    };
+    //Matrix matqqw;
+    //matqqw.setMatrix(matrix4x4);
+    //Matrix matone;
+    //matone.setMatrix(matrix4x1);
+    //std::cout << matone << std::endl;
+    //std::cout << "paddint: " <<  std::endl;
+    //matone.addPadding(2);
+    //std::cout << matone << std::endl;
+    //std::cout << matone.rotateMatrix180() << std::endl;
     
     //std::cout << matone.Transpose() << std::endl;
     ConvolutionalNeuralNetwork cnn;
-    Matrix img;
     std::vector<std::vector<double>> image = loadImage("../dataset/minst/test/7/0.jpg");
-    img.setMatrix(image);
-    std::cout << img << std::endl;
     cnn.feedforward(image);
     /*
     for(int i = 0; i < image[0].size();i++){
