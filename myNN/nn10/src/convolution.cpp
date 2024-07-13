@@ -9,17 +9,19 @@
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebufalgo.h>
 
+/*
+std::vector<int> OneNum = {1,0,0,0,0,0,0,0,0,0};
+std::vector<int> TwoNum = {0,1,0,0,0,0,0,0,0,0};
+std::vector<int> ThreeNum = {0,0,1,0,0,0,0,0,0,0};
+std::vector<int> FourNum = {0,0,0,1,0,0,0,0,0,0};
+std::vector<int> FiveNum = {0,0,0,0,1,0,0,0,0,0};
+std::vector<int> SixNum = {0,0,0,0,0,1,0,0,0,0};
+std::vector<int> SevenNum = {0,0,0,0,0,0,1,0,0,0};
+std::vector<int> EightNum = {1,0,0,0,0,0,0,1,0,0};
+std::vector<int> NineNum = {1,0,0,0,0,0,0,0,1,0};
+std::vector<int> TenNum = {1,0,0,0,0,0,0,0,0,1};
+*/
 
-std::vector OneNum = {1,0,0,0,0,0,0,0,0,0};
-std::vector TwoNum = {0,1,0,0,0,0,0,0,0,0};
-std::vector ThreeNum = {0,0,1,0,0,0,0,0,0,0};
-std::vector FourNum = {0,0,0,1,0,0,0,0,0,0};
-std::vector FiveNum = {0,0,0,0,1,0,0,0,0,0};
-std::vector SixNum = {0,0,0,0,0,1,0,0,0,0};
-std::vector SevenNum = {0,0,0,0,0,0,1,0,0,0};
-std::vector EightNum = {1,0,0,0,0,0,0,1,0,0};
-std::vector NineNum = {1,0,0,0,0,0,0,0,1,0};
-std::vector TenNum = {1,0,0,0,0,0,0,0,0,1};
 
 template <class T>
 T FindMin(std::vector<std::vector<T>> array){
@@ -185,10 +187,10 @@ std::vector<std::vector<double>> softmaxDerivative(std::vector<double>& data) {
     return softmaxJacobian;
 }
 
-
+/*
 std::vector<std::vector<double>> loadImage(std::string filepath){
     int width, height, bpp;
-    uint8_t* rgb_image = stbi_load(filepath.c_str(), &width, &height, &bpp, 3);
+    uint8_t* rgb_image = stbi_load(filepath.c_str(), &width, &height, &bpp, 1);
     const int sizeX = 28;
     const int sizeY = 28;
     std::vector<std::vector<double>> output(sizeX, std::vector<double>(sizeY, 0));  
@@ -196,7 +198,7 @@ std::vector<std::vector<double>> loadImage(std::string filepath){
     for(int i = 0; i < sizeX;i++){
         for(int j = 0; j < sizeY;j++){
             //std::cout << static_cast<unsigned int>(rgb_image[i + totalPixels*j]) << " ";
-            output[i][j] = static_cast<unsigned int>(rgb_image[i + totalPixels*j]); 
+            output[i][j] = static_cast<double>(rgb_image[i + totalPixels*j]); 
             totalPixels++;
         }
         std::cout << "\n";
@@ -205,11 +207,76 @@ std::vector<std::vector<double>> loadImage(std::string filepath){
     double min = FindMin(output);
     double max = FindMax(output);
     return NormalizeImage(output, 1.0, min, max); 
-}
+}*/
+
+std::vector<std::vector<double>> loadImage(std::string filepath){
+        //filename = filepath;
+        auto inp = OIIO::ImageInput::open(filepath);
+
+        const OIIO::ImageSpec &spec = inp->spec();
+        int xres = spec.width;
+        int yres = spec.height;
+
+        int nchannels = spec.nchannels;
+
+        auto pixels = std::unique_ptr<int[]>(new int[xres * yres * nchannels]);
+        inp->read_image(0, 0, 0, nchannels, OIIO::TypeDesc::UINT8, &pixels[0]);
+        inp->close();
+
+        //std::vector<std::vector<std::vector<int>>> Image;
+
+        std::vector<int> GrayArray(xres*yres);
+        //std::vector<int> Garray(xres*yres);
+        //std::vector<int> Barray(xres*yres);
+        
+        for (int i=0; i<xres*yres; i++) { 
+            GrayArray[i] = pixels[i*nchannels];
+            //Garray[i] = pixels[i*nchannels + 1];
+            //Barray[i] = pixels[i*nchannels + 2];
+        }
+
+        std::vector<std::vector<double>> Grayprocessed(xres, std::vector<double>(yres, 0));
+        //std::vector<std::vector<int>> Gprocessed(xres, std::vector<int>(yres, 0));
+        //std::vector<std::vector<int>> Bprocessed(xres, std::vector<int>(yres, 0));
+        
+        int pixelFlatToXY = 0; 
+        for(unsigned int x = 0; x != xres; ++x ) {
+            for(unsigned int y = 0; y != yres; ++y ) {
+                Grayprocessed[x][y] = (double)GrayArray[pixelFlatToXY];
+                //Gprocessed[x][y] = (int)Garray[pixelFlatToXY];
+                //Bprocessed[x][y] = (int)Barray[pixelFlatToXY];
+                pixelFlatToXY++;
+            } 
+        }
+
+        //Image.push_back(Rprocessed);
+        //Image.push_back(Gprocessed);
+        //Image.push_back(Bprocessed);
+        //return Grayprocessed;
+        double min = FindMin(Grayprocessed);
+        double max = FindMax(Grayprocessed);
+        return NormalizeImage(Grayprocessed, 1.0, min, max); 
+    }
+
+
+std::vector<std::vector<double>> numLabels = {
+    {1,0,0,0,0,0,0,0,0,0},
+    {0,1,0,0,0,0,0,0,0,0},
+    {0,0,1,0,0,0,0,0,0,0},
+    {0,0,0,1,0,0,0,0,0,0},
+    {0,0,0,0,1,0,0,0,0,0},
+    {0,0,0,0,0,1,0,0,0,0},
+    {0,0,0,0,0,0,1,0,0,0},
+    {0,0,0,0,0,0,0,1,0,0},
+    {0,0,0,0,0,0,0,0,1,0},
+    {0,0,0,0,0,0,0,0,0,1}
+};
+
+
 
 class ConvolutionalNeuralNetwork {       
     private:
-        std::vector<std::pair<std::vector<std::vector<int>>, int>> dataset;
+        std::vector<std::pair<std::vector<std::vector<double>>, std::vector<double>>> dataset;
         
         int numKenrelsC1; 
         int sizeKernelXc1;
@@ -308,6 +375,44 @@ class ConvolutionalNeuralNetwork {
                 bias1[i] = dist(mt); 
             }
         }
+    void loadDataset(){
+        std::string path = "../dataset/minst/train/";
+        /*
+        std::string pathZero = "../dataset/minst/train/0";
+        std::string pathOne = "../dataset/minst/train/1";
+        std::string pathTwo = "../dataset/minst/train/2";
+        std::string pathThree = "../dataset/minst/train/3";
+        std::string pathFour = "../dataset/minst/train/4";
+        std::string pathFive = "../dataset/minst/train/5";
+        std::string pathSix = "../dataset/minst/train/6";
+        std::string pathOne = "../dataset/minst/train/7";
+        std::string pathTwo = "../dataset/minst/train/8";
+        std::string pathTwo = "../dataset/minst/train/9";
+        std::vector<std::string> pathsNum = {
+            "../dataset/minst/train/0", 
+            "../dataset/minst/train/1",
+            "../dataset/minst/train/2",
+        }*/
+        int size = 100;
+        int iterSize = 0;
+        for (int i = 0; i < numLabels.size(); i++){
+            std::string pathLoad = path + std::to_string(i);  
+            for (const auto & entry : std::filesystem::directory_iterator(pathLoad)){
+                if (iterSize >= size) break; 
+                
+                //std::pair<std::vector<std::vector<int>>, std::vector<double>> data;
+                //data = std::make_pair(loadImage(entry.path().string()), numLabels[i]);
+                //std::cout << "str: " << entry.path().string() << std::endl;
+                std::vector<std::vector<double>> image = loadImage(entry.path().string());
+                dataset.push_back(std::make_pair(image, numLabels[i]));
+                std::cout << "amount dataset load: " << dataset.size() << std::endl;
+                iterSize++;
+
+            }
+            iterSize = 0;
+        }
+        std::cout << "amount dataset: " << dataset.size() << std::endl;
+    }
       std::vector<std::vector<double>> convolve(std::vector<std::vector<double>> image, int padding, int stride, std::vector<std::vector<double>> kernelConv, int bias) {
 
 

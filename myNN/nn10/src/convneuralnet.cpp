@@ -6,6 +6,7 @@
 #include "functions.cpp"
 #include <bits/stdc++.h>
 #include <random>
+#include <vector>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -45,6 +46,7 @@ int main(){
     
     //std::cout << matone.Transpose() << std::endl;
     ConvolutionalNeuralNetwork cnn;
+    cnn.loadDataset();
     std::vector<std::vector<double>> image = loadImage("../dataset/minst/test/7/0.jpg");
     cnn.feedforward(image);
     /*

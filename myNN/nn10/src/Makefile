@@ -1,11 +1,11 @@
 FILE = convneuralnet.cpp 
-CFLAG = -Wall -g
+CFLAG = -ggdb3 -g
 CC = g++
 INCLUDES = -I../include
 LIBS = -Wl,-rpath,../lib -L../lib -lOpenImageIO 
 
 conv:${OBJ}
-	${CC} ${FILE} ${LIBS} ${CFLAGS} ${INCLUDES} -o $@ 
+	${CC} ${FILE} ${LIBS} ${CFLAG} ${INCLUDES} -o $@ 
 
 clean:
 	-rm conv
