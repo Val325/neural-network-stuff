@@ -25,9 +25,6 @@ int main(){
     };
     std::vector<std::vector<double>> matrix4x1 = {
         {1, 2, 3, 4},
-        {5, 6, 7, 8},
-        {9, 10, 11, 12},
-        {13, 14, 15, 16},
     };
     std::vector<std::vector<double>> matrixKonv = {
         {2, 4, 4, 2, 1},
@@ -40,7 +37,7 @@ int main(){
     //matqqw.setMatrix(matrix4x4);
     //Matrix matone;
     //matone.setMatrix(matrix4x1);
-    //std::cout << matone << std::endl;
+    //std::cout << matone * matqqw << std::endl;
     //std::cout << "paddint: " <<  std::endl;
     //matone.addPadding(2);
     //std::cout << matone << std::endl;

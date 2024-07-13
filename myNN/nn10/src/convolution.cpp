@@ -9,6 +9,18 @@
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebufalgo.h>
 
+
+std::vector OneNum = {1,0,0,0,0,0,0,0,0,0};
+std::vector TwoNum = {0,1,0,0,0,0,0,0,0,0};
+std::vector ThreeNum = {0,0,1,0,0,0,0,0,0,0};
+std::vector FourNum = {0,0,0,1,0,0,0,0,0,0};
+std::vector FiveNum = {0,0,0,0,1,0,0,0,0,0};
+std::vector SixNum = {0,0,0,0,0,1,0,0,0,0};
+std::vector SevenNum = {0,0,0,0,0,0,1,0,0,0};
+std::vector EightNum = {1,0,0,0,0,0,0,1,0,0};
+std::vector NineNum = {1,0,0,0,0,0,0,0,1,0};
+std::vector TenNum = {1,0,0,0,0,0,0,0,0,1};
+
 template <class T>
 T FindMin(std::vector<std::vector<T>> array){
     T minNumber = INT_MAX;
@@ -64,6 +76,116 @@ double FindMaxElem(std::vector<std::vector<double>> poolMax){
     return maxNumber;
 }
 
+std::vector<double> Relu(const std::vector<double>& data) {
+
+    const unsigned long VECTOR_SIZE = data.size();
+    std::vector<double> output(VECTOR_SIZE);
+    
+    
+    for(unsigned i = 0; i != VECTOR_SIZE; ++i ) {
+        if (data[i] < 0) output[i] = 0;
+        if (data[i] >= 0) output[i] = data[i]; 
+    }
+    
+    return output;
+}
+
+double Relu(const double& data) {
+    double output;
+    if (data < 0) output = 0;
+    if (data >= 0) output = data; 
+    return output;
+}
+
+std::vector<double> derivativeRelu(const std::vector<double>& data) {
+    const unsigned long VECTOR_SIZE = data.size();
+    std::vector<double> output(VECTOR_SIZE);
+     
+    for(unsigned i = 0; i != VECTOR_SIZE; ++i ) {
+        if (data[i] < 0) output[i] = 0;
+        if (data[i] >= 0) output[i] = 1;
+    }
+    
+    return output;
+}
+
+double derivativeRelu(double& data) {
+    double output;
+    if (data < 0) output = 0;
+    if (data >= 0) output = 1; 
+    return output;
+}
+
+double MSEloss(std::vector<double> X, std::vector<int> Y){
+    int sizeOutput = X.size();
+    //std::cout << "\nsizeOutput: " << sizeOutput << std::endl;
+    //std::cout << "Y: " << Y << std::endl;
+
+    double sum = 0;
+    for (int i = 0; i < sizeOutput; i++) {
+        //std::cout << " ((double)Y - X[i]) * ((double)Y - X[i]): " <<  ((double)Y - X[i]) * ((double)Y - X[i]) << std::endl;
+        sum += ((double)Y[i] - X[i]) * ((double)Y[i] - X[i]);
+        //std::cout << "X[i]: " <<  X[i] << std::endl;
+
+        //std::cout << "sum: " << sum << " sizeOutput: " << sizeOutput << " (double)X[i] " << (double)X[i] << " Y: " << Y << std::endl;
+    }
+    sum = sum / 2*sizeOutput;
+    //std::cout << "sum after (sum / sizeOutput): " << sum << std::endl;
+    return sum;
+}
+std::vector<double> MSElossDerivative(std::vector<double> X, std::vector<int> Y){
+    int sizeOutput = X.size();
+    std::vector<double> output;
+    for (int i = 0; i < sizeOutput; i++) {
+       double deriv = ((Y[i] - (double)X[i])) / sizeOutput;
+       //std::cout << "deriv: " << deriv << " sizeOutput: " << sizeOutput << " (double)X[i] " << (double)X[i] << " Y: " << Y << std::endl;       
+       output.push_back(deriv);
+    }
+    return output;
+
+}
+
+std::vector<double> softmax(const std::vector<double>& data) { 
+    const unsigned long VECTOR_SIZE = data.size();
+    std::vector<double> output(VECTOR_SIZE);
+
+    double sum = 0; 
+    for(unsigned i = 0; i != VECTOR_SIZE; ++i ) {
+        sum += data[i]; 
+    }
+
+
+    for(unsigned i = 0; i != VECTOR_SIZE; ++i ) {
+        output[i] = data[i] / sum;
+    }
+    
+    return output;
+}
+
+//https://stats.stackexchange.com/questions/453539/softmax-derivative-implementation
+std::vector<std::vector<double>> softmaxDerivative(std::vector<double>& data) { 
+    const int VECTOR_SIZE = data.size();
+    std::vector<double> output(VECTOR_SIZE);
+    std::vector<double> softmaxData(VECTOR_SIZE);
+    
+    softmaxData = softmax(data); 
+    std::vector<std::vector<double>> softmaxJacobian(VECTOR_SIZE, std::vector<double>(VECTOR_SIZE, 0)); 
+    softmaxJacobian.resize(VECTOR_SIZE);
+
+    for(int i = 0; i != VECTOR_SIZE-1; ++i ) {
+       for(int j = 0; j != VECTOR_SIZE-1; ++j ) {
+            if (i == j){
+                softmaxJacobian[i][j] = softmaxData[i] * (1 - softmaxData[i]);
+            }else{
+                softmaxJacobian[i][j] = -softmaxData[i] * softmaxData[j]; 
+            }
+        } 
+    }
+    
+    return softmaxJacobian;
+}
+
+
 std::vector<std::vector<double>> loadImage(std::string filepath){
     int width, height, bpp;
     uint8_t* rgb_image = stbi_load(filepath.c_str(), &width, &height, &bpp, 3);
@@ -106,11 +228,18 @@ class ConvolutionalNeuralNetwork {
         std::vector<double> Bias2;
         std::vector<double> DesnseLayer;
 
+        std::vector<std::vector<double>> weightsW1;        
+        int inputWeights;
+        int outputWeights;
+        std::vector<double> bias1;        
+        int biasSize;
+
     public:
         ConvolutionalNeuralNetwork(){
             std::random_device rd;
             std::mt19937 mt(rd());
-            std::uniform_real_distribution<double> dist(0.0, 1.0); 
+            std::uniform_real_distribution<double> dist(0.0, 1.0);
+
             sizeKernelXc1 = 5;
             sizeKernelYc1 = 5;
             
@@ -164,7 +293,20 @@ class ConvolutionalNeuralNetwork {
                 std::cout << "---------------" << std::endl;
             }
 
-
+            inputWeights = 192;
+            outputWeights = 10;
+            biasSize = 10;
+            weightsW1.resize(inputWeights);
+            for (int i = 0; i < inputWeights; i++){
+                weightsW1[i].resize(outputWeights);
+                for (int j = 0; j < outputWeights; j++){
+                    weightsW1[i][j] = dist(mt); 
+                }
+            }
+            bias1.resize(biasSize);
+            for (int i = 0; i < biasSize; i++){
+                bias1[i] = dist(mt); 
+            }
         }
       std::vector<std::vector<double>> convolve(std::vector<std::vector<double>> image, int padding, int stride, std::vector<std::vector<double>> kernelConv, int bias) {
 
@@ -249,6 +391,7 @@ class ConvolutionalNeuralNetwork {
       void feedforward(std::vector<std::vector<double>> image){
             //Matrix img;
             //img.setMatrix(image);
+            //std::cout << "img: " << std::endl;            
             //std::cout << img << std::endl;
             for (int i = 0; i < numKenrelsC1; ++i){
                 std::vector<std::vector<double>> conv1 = convolve(image, 0, 1, kernelsC1[i], Bias1[i]);
@@ -260,13 +403,13 @@ class ConvolutionalNeuralNetwork {
             int numConv = 0;
             for (int i = 0; i < numKenrelsC2; ++i){
                 for (int j = 0; j < poolLayer1.size(); ++j){
-                    std::cout << "number pool: " << numConv+1 << std::endl;
+                    //std::cout << "number pool: " << numConv+1 << std::endl;
                     std::vector<std::vector<double>> conv2 = convolve(poolLayer1[j], 0, 1, kernelsC2[i], Bias2[i]);
                     convLayer2.push_back(conv2);
                     std::vector<std::vector<double>> pool2 = MaxPool(conv2);
                     Matrix pooltemp;
                     pooltemp.setMatrix(pool2);
-                    std::cout << pooltemp << std::endl;
+                    //std::cout << pooltemp << std::endl;
                     poolLayer2.push_back(pool2);
                     numConv += 1;
                 }
@@ -278,10 +421,43 @@ class ConvolutionalNeuralNetwork {
                     }
                 }
             }            
-            std::cout << DesnseLayer.size() << std::endl; 
-            //Matrix pool;
-            //pool.setMatrix(pool2);
-            //std::cout << pool << std::endl;
+            std::cout << DesnseLayer.size() << std::endl;
+            std::vector<std::vector<double>> denselayer;
+            denselayer.push_back(DesnseLayer);
+            double minDense = FindMin(denselayer);
+            double maxDense = FindMax(denselayer);
+            denselayer = NormalizeImage(denselayer, 1.0, minDense, maxDense);
+            //std::cout << "weightsW1.size(): " << std::endl;
+            std::cout << weightsW1.size() << std::endl;
+            //std::cout << "weightsW1[0].size(): " << std::endl;
+            std::cout << weightsW1[0].size() << std::endl;
+            std::vector<double> output;
+            for (int i = 0; i <  weightsW1[0].size(); ++i){
+                double sumNeuron = 0;
+                for (int j = 0; j < weightsW1.size(); ++j){
+                    sumNeuron = weightsW1[j][i] * DesnseLayer[j]; 
+                }
+                sumNeuron += bias1[i];
+                output.push_back(sumNeuron);
+                //std::cout << "output: " << output[i] << std::endl;
+            }
+            output = softmax(output);
+            for (int i = 0; i < output.size(); ++i){
+                std::cout << i+1 << " : " << output[i] << std::endl;
+            }
+            std::vector<double>::iterator result;
+            result = std::max_element(output.begin(), output.end()); 
+            std::cout << "max prob index " << std::distance(output.begin(), result)+1 << std::endl;
+            //Matrix dense;
+            //dense.setMatrix(denselayer);
+           
+            //Matrix w1;
+            //w1.setMatrix(weightsW1);
+            //std::cout << "w1: " << std::endl;
+            //std::cout << w1 << std::endl;
+            //std::cout << "dense: " << std::endl;
+            //std::cout << dense << std::endl;
+
             /*
             std::vector<std::vector<std::vector<double>>> conv1layer;
             for (int i = 0; i < numKenrelsC1; i++){

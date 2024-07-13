@@ -142,6 +142,7 @@ class Matrix {
             }*/
         }
   }
+
   Matrix operator*(Matrix const& mat_inside){ 
     int sizeRowFirst = mat[0].size();
     int sizeColumn = mat.size();
@@ -179,7 +180,12 @@ class Matrix {
 };
   std::ostream& operator<<(std::ostream& out, const Matrix& mat_inside)
   {
-    std::cout << "matrix: "  << std::endl;
+    std::cout << "matrix: "  << mat_inside.mat.size() << std::endl;
+    if (mat_inside.mat.size() == 1){
+        for(int j = 0; j < mat_inside.mat[0].size();j++){
+            out << mat_inside.mat[0][j] << " ";
+        }
+    } 
     if (mat_inside.mat.size() != 1){
         for(int i = 0; i < mat_inside.mat[0].size();i++){
             for(int j = 0; j < mat_inside.mat.size();j++){
@@ -187,10 +193,7 @@ class Matrix {
             }
             out << "\n";
         } 
-    }else{
-        for(int j = 0; j < mat_inside.mat[0].size();j++){
-            out << mat_inside.mat[0][j] << " ";
-        }
     }
+
         return out;  
   }
