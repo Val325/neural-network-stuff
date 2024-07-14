@@ -47,8 +47,9 @@ int main(){
     //std::cout << matone.Transpose() << std::endl;
     ConvolutionalNeuralNetwork cnn;
     cnn.loadDataset();
-    std::vector<std::vector<double>> image = loadImage("../dataset/minst/test/7/0.jpg");
-    cnn.feedforward(image);
+    cnn.train();
+    //std::vector<std::vector<double>> image = loadImage("../dataset/minst/test/7/0.jpg");
+    //cnn.feedforward(image);
     /*
     for(int i = 0; i < image[0].size();i++){
         for(int j = 0; j < image.size();j++){

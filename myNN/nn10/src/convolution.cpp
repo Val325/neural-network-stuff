@@ -118,7 +118,7 @@ double derivativeRelu(double& data) {
     return output;
 }
 
-double MSEloss(std::vector<double> X, std::vector<int> Y){
+double MSEloss(std::vector<double> X, std::vector<double> Y){
     int sizeOutput = X.size();
     //std::cout << "\nsizeOutput: " << sizeOutput << std::endl;
     //std::cout << "Y: " << Y << std::endl;
@@ -126,7 +126,7 @@ double MSEloss(std::vector<double> X, std::vector<int> Y){
     double sum = 0;
     for (int i = 0; i < sizeOutput; i++) {
         //std::cout << " ((double)Y - X[i]) * ((double)Y - X[i]): " <<  ((double)Y - X[i]) * ((double)Y - X[i]) << std::endl;
-        sum += ((double)Y[i] - X[i]) * ((double)Y[i] - X[i]);
+        sum += (Y[i] - X[i]) * (Y[i] - X[i]);
         //std::cout << "X[i]: " <<  X[i] << std::endl;
 
         //std::cout << "sum: " << sum << " sizeOutput: " << sizeOutput << " (double)X[i] " << (double)X[i] << " Y: " << Y << std::endl;
@@ -135,7 +135,7 @@ double MSEloss(std::vector<double> X, std::vector<int> Y){
     //std::cout << "sum after (sum / sizeOutput): " << sum << std::endl;
     return sum;
 }
-std::vector<double> MSElossDerivative(std::vector<double> X, std::vector<int> Y){
+std::vector<double> MSElossDerivative(std::vector<double> X, std::vector<double> Y){
     int sizeOutput = X.size();
     std::vector<double> output;
     for (int i = 0; i < sizeOutput; i++) {
@@ -301,6 +301,8 @@ class ConvolutionalNeuralNetwork {
         std::vector<double> bias1;        
         int biasSize;
 
+        std::vector<double> denselayerSave;
+        
     public:
         ConvolutionalNeuralNetwork(){
             std::random_device rd;
@@ -422,8 +424,8 @@ class ConvolutionalNeuralNetwork {
             int convW = ((sizeW - kernelConv[0].size() + 2 * padding) / stride) + 1;
             int convH = ((sizeH - kernelConv.size() + 2 * padding) / stride) + 1;
             std::vector<std::vector<double>> output(convW, std::vector<double>(convH, 0));
-            std::cout << "convW: " << convW << std::endl;
-            std::cout << "convH: " << convH << std::endl;
+            //std::cout << "convW: " << convW << std::endl;
+            //std::cout << "convH: " << convH << std::endl;
         
             int kCenterX = kernelConv.size() / 2;
             int kCenterY = kernelConv.size() / 2;
@@ -460,8 +462,8 @@ class ConvolutionalNeuralNetwork {
         int sizePoolY = ((sizeY - filter + 2 * padding) / stride) + 1;
         std::vector<std::vector<double>> output(sizePoolX, std::vector<double>(sizePoolY, 0));
         //convBeforePooling = convBeforePooling(sizeInputX, std::vector<int>(sizeInputY, 0));
-        std::cout << "sizePoolX: " << sizePoolX << std::endl;
-        std::cout << "sizePoolY: " << sizePoolY << std::endl;
+        //std::cout << "sizePoolX: " << sizePoolX << std::endl;
+        //std::cout << "sizePoolY: " << sizePoolY << std::endl;
         for (int i = 0; i < sizePoolX; ++i)              // rows
         {
             for (int j = 0; j < sizePoolY; ++j)          // columns
@@ -493,7 +495,7 @@ class ConvolutionalNeuralNetwork {
 
         return output;
     }
-      void feedforward(std::vector<std::vector<double>> image){
+      std::vector<double> feedforward(std::vector<std::vector<double>> image){
             //Matrix img;
             //img.setMatrix(image);
             //std::cout << "img: " << std::endl;            
@@ -522,20 +524,22 @@ class ConvolutionalNeuralNetwork {
             for (int i = 0; i < poolLayer2.size(); ++i){
                 for (int j = 0; j < poolLayer2[0].size(); ++j){
                     for (int k = 0; k < poolLayer2[0][0].size(); ++k){
-                        DesnseLayer.push_back(poolLayer2[i][j][k]); 
+                        DesnseLayer.push_back(poolLayer2[i][j][k]);
                     }
                 }
-            }            
+            }
+            denselayerSave = DesnseLayer; 
             std::cout << DesnseLayer.size() << std::endl;
+            
             std::vector<std::vector<double>> denselayer;
             denselayer.push_back(DesnseLayer);
             double minDense = FindMin(denselayer);
             double maxDense = FindMax(denselayer);
             denselayer = NormalizeImage(denselayer, 1.0, minDense, maxDense);
             //std::cout << "weightsW1.size(): " << std::endl;
-            std::cout << weightsW1.size() << std::endl;
+            //std::cout << weightsW1.size() << std::endl;
             //std::cout << "weightsW1[0].size(): " << std::endl;
-            std::cout << weightsW1[0].size() << std::endl;
+            //std::cout << weightsW1[0].size() << std::endl;
             std::vector<double> output;
             for (int i = 0; i <  weightsW1[0].size(); ++i){
                 double sumNeuron = 0;
@@ -547,12 +551,18 @@ class ConvolutionalNeuralNetwork {
                 //std::cout << "output: " << output[i] << std::endl;
             }
             output = softmax(output);
-            for (int i = 0; i < output.size(); ++i){
+            /*for (int i = 0; i < output.size(); ++i){
                 std::cout << i+1 << " : " << output[i] << std::endl;
-            }
+            }*/
+            convLayer1.clear();
+            poolLayer1.clear();
+            convLayer2.clear();
+            poolLayer2.clear();
+            DesnseLayer.clear();
             std::vector<double>::iterator result;
-            result = std::max_element(output.begin(), output.end()); 
-            std::cout << "max prob index " << std::distance(output.begin(), result)+1 << std::endl;
+            result = std::max_element(output.begin(), output.end());
+            return output; 
+            //std::cout << "max prob index " << std::distance(output.begin(), result)+1 << std::endl;
             //Matrix dense;
             //dense.setMatrix(denselayer);
            
@@ -580,5 +590,22 @@ class ConvolutionalNeuralNetwork {
                     std::cout << "\n";
                 }
         }*/
+      }
+      void train(){
+        int epoch = 10;
+        std::cout << "size: " << dataset.size() << std::endl;
+        for (int i = 0; i < epoch; ++i){
+            for (int j = 0; j < dataset.size(); ++j){
+                std::vector<double> prediction = feedforward(dataset[j].first); 
+                std::cout << "epoch: " << i << " loss: " << MSEloss(prediction, dataset[j].second) << std::endl;
+                
+                std::vector<double> derivLoss = MSElossDerivative(prediction, dataset[j].second);
+                std::vector<std::vector<double>> softmaxDeriv = softmaxDerivative(denselayerSave); 
+                std::cout << "derivLoss: " << derivLoss.size() << std::endl;
+                std::cout << "softmaxDeriv: " << softmaxDeriv.size() << std::endl;
+                std::cout << "softmaxDeriv[0]: " << softmaxDeriv[0].size() << std::endl;
+            }
+             
+        }
       }
 };
