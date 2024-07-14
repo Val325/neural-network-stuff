@@ -23,6 +23,13 @@ std::vector<int> NineNum = {1,0,0,0,0,0,0,0,1,0};
 std::vector<int> TenNum = {1,0,0,0,0,0,0,0,0,1};
 */
 
+struct MaxPoolingData
+{
+    std::vector<std::vector<int>> output;
+    std::vector<std::pair<int, int>> MaxPoolBackpropIndex;
+    int SizeXMaxPool;
+    int SizeYMaxPool;
+};
 
 template <class T>
 T FindMin(std::vector<std::vector<T>> array){
@@ -725,7 +732,24 @@ class ConvolutionalNeuralNetwork {
                     }
                     bias1[k] -= learningRate * derivLoss[k] * sigmoidDeriv[k]; 
                 }
+                std::vector<std::vector<double>> pools2backprop;
+                
+                int sizePool = 16;
+                for (int i = 0; i < inputWeights / sizePool; ++i){
+                    std::vector<double> onePool;
+                    for (int j = 0; j < sizePool; ++j){ 
+                            onePool.push_back(denselayerSave[i*sizePool+j]); 
+                    }
+                    pools2backprop.push_back(onePool);
+                    onePool.clear();
+                }
+                //std::cout << "pools2backprop: " << pools2backprop.size() << std::endl;
+                //std::cout << "pools2backprop[0]: " << poolLayer2[0].size() << std::endl;
+                //std::cout << "pools2backprop[0][0]: " << poolLayer2[0][0].size() << std::endl;
 
+                //std::cout << "softmaxDeriv[0]: " << softmaxDeriv[0].size() << std::endl;
+
+                //denselayerSave
                 //std::cout << "softmaxDeriv[0]: " << softmaxDeriv[0].size() << std::endl;
             }
              
