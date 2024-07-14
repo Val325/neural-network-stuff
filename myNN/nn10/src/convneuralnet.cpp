@@ -16,7 +16,6 @@
 
 #include "matrix.cpp"
 #include "convolution.cpp"
-
 int main(){
     std::vector<std::vector<double>> matrix4x4 = {
         {4, 4, 4, 4},
@@ -50,11 +49,11 @@ int main(){
     cnn.train();
     //std::vector<std::vector<double>> image = loadImage("../dataset/minst/test/7/0.jpg");
     //cnn.feedforward(image);
-    /*
-    for(int i = 0; i < image[0].size();i++){
+    
+    /*for(int i = 0; i < image[0].size();i++){
         for(int j = 0; j < image.size();j++){
             std::cout << image[i][j] << " ";
         }
         std::cout << "\n";
-    }*/ 
+    } */
 }

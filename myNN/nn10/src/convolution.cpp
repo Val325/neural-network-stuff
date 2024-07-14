@@ -8,6 +8,7 @@
 #include <random>
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebufalgo.h>
+#include "CImg.h"
 
 /*
 std::vector<int> OneNum = {1,0,0,0,0,0,0,0,0,0};
@@ -187,6 +188,97 @@ std::vector<std::vector<double>> softmaxDerivative(std::vector<double>& data) {
     return softmaxJacobian;
 }
 
+std::vector<double> sigmoid(const std::vector<double>& data) {
+    
+    /*  
+        Returns the value of the sigmoid function f(x) = 1/(1 + e^-x).
+        Input: m1, a vector.
+        Output: 1/(1 + e^-x) for every element of the input matrix m1.
+    */
+    
+    const unsigned long VECTOR_SIZE = data.size();
+    std::vector<double> output(VECTOR_SIZE);
+    
+    
+    for(unsigned i = 0; i != VECTOR_SIZE; ++i ) {
+        /*if (data[i] < 0){
+            //output[i] = 1 / (1 + exp(-data[i]));
+            output[i] = exp(data[i]) / (1 + exp(data[i])); 
+        }else{
+            //output[i] = 1 / (1 + exp(data[i]));
+            output[i] = 1 / (1 + exp(-data[i]));
+        }*/
+         output[i] = 1 / (1 + exp(-data[i]));
+        
+        /*if (data[i] >= 5.) output[i] = 1.;
+        else if (data[i] <= -5.) output[i] = 0.1;
+        else output[i] = 1. / (1. + std::exp(-data[i]));
+        */
+        //output[i] = (1 / (1 + pow(EULER_NUMBER, -data[i])));
+    }
+    
+    return output;
+}
+
+double sigmoid(const double& data) {
+    double output;
+    
+    output = 1 / (1 + exp(-data));
+    /*
+    if (data >= 0){
+        output = 1 / (1 + exp(-data));
+    }else{
+        output = 1 / (1 + exp(data));
+    }*/ 
+    //output = (1 / (1 + pow(EULER_NUMBER, -data)));
+    /*if (data >= 5.) output = 1.;
+    else if (data <= -5.) output = 0.1;
+    else output = 1. / (1. + std::exp(-data));*/
+    //std::cout << "----------------------" << std::endl;
+    //std::cout << "1 / (1 + exp(-data)): " << std::endl;
+    //std::cout << "sigmoid output: " << output << std::endl;
+    //std::cout << "sigmoid data: " << data << std::endl;     
+    return output;
+}
+
+
+
+
+
+std::vector<double> derivativeSigmoid(const std::vector<double>& data) {
+    /*  
+        Returns the value of the derivative sigmoid function f(x) = 1/(1 + e^-x).
+        Input: m1, a vector.
+        Output: derivative sigmoid 
+    */ 
+    const unsigned long VECTOR_SIZE = data.size();
+    std::vector<double> output(VECTOR_SIZE);
+    
+    
+    for(unsigned i = 0; i != VECTOR_SIZE; ++i ) {
+        output[i] = sigmoid(data[i]) * (1 - sigmoid(data[i])); 
+    }
+    
+    return output;
+}
+
+double derivativeSigmoid(double& data) {
+    /*  
+        Returns the value of the derivative sigmoid function f(x) = 1/(1 + e^-x).
+        Input: m1, a vector.
+        Output: derivative sigmoid 
+    */ 
+    double output; 
+    output = sigmoid(data) * (1 - sigmoid(data));
+    //std::cout << "sigmoid(data) * (1 - sigmoid(data)): " << std::endl;
+    //std::cout << "sigmoid deriv: " << output << std::endl;
+    //std::cout << "sigmoid data: " << data << std::endl; 
+
+    return output;
+}
+
+
+
 /*
 std::vector<std::vector<double>> loadImage(std::string filepath){
     int width, height, bpp;
@@ -208,7 +300,7 @@ std::vector<std::vector<double>> loadImage(std::string filepath){
     double max = FindMax(output);
     return NormalizeImage(output, 1.0, min, max); 
 }*/
-
+/*
 std::vector<std::vector<double>> loadImage(std::string filepath){
         //filename = filepath;
         auto inp = OIIO::ImageInput::open(filepath);
@@ -255,10 +347,30 @@ std::vector<std::vector<double>> loadImage(std::string filepath){
         //return Grayprocessed;
         double min = FindMin(Grayprocessed);
         double max = FindMax(Grayprocessed);
-        return NormalizeImage(Grayprocessed, 1.0, min, max); 
+        return Grayprocessed; //NormalizeImage(, 1.0, min, max); 
     }
+*/
+std::vector<std::vector<double>> loadImage(std::string filepath){
+    cimg_library::CImg<unsigned char> img(filepath.c_str());
+    int w=img.width();
+    int h=img.height();
+    int c=img.spectrum();
+    //std::cout << "Dimensions: " << w << "x" << h << " " << c << " channels" << std::endl;
+    std::vector<std::vector<double>> Image;
 
-
+    for(int y=0;y<h;y++){
+       std::vector<double> xImg;
+       for(int x=0;x<w;x++){
+           xImg.push_back((double)img(x,y));
+           //std::cout << y << "," << x << " " << (double)img(x,y) << std::endl;
+       }
+       Image.push_back(xImg);
+       xImg.clear();
+    }
+    double min = FindMin(Image);
+    double max = FindMax(Image);
+    return NormalizeImage(Image, 1.0, min, max);
+}
 std::vector<std::vector<double>> numLabels = {
     {1,0,0,0,0,0,0,0,0,0},
     {0,1,0,0,0,0,0,0,0,0},
@@ -277,7 +389,8 @@ std::vector<std::vector<double>> numLabels = {
 class ConvolutionalNeuralNetwork {       
     private:
         std::vector<std::pair<std::vector<std::vector<double>>, std::vector<double>>> dataset;
-        
+        double learningRate;
+
         int numKenrelsC1; 
         int sizeKernelXc1;
         int sizeKernelYc1;
@@ -302,9 +415,11 @@ class ConvolutionalNeuralNetwork {
         int biasSize;
 
         std::vector<double> denselayerSave;
+        std::vector<double> sumLayer;
         
     public:
         ConvolutionalNeuralNetwork(){
+            learningRate = 0.001;
             std::random_device rd;
             std::mt19937 mt(rd());
             std::uniform_real_distribution<double> dist(0.0, 1.0);
@@ -529,7 +644,7 @@ class ConvolutionalNeuralNetwork {
                 }
             }
             denselayerSave = DesnseLayer; 
-            std::cout << DesnseLayer.size() << std::endl;
+            //std::cout << DesnseLayer.size() << std::endl;
             
             std::vector<std::vector<double>> denselayer;
             denselayer.push_back(DesnseLayer);
@@ -550,7 +665,8 @@ class ConvolutionalNeuralNetwork {
                 output.push_back(sumNeuron);
                 //std::cout << "output: " << output[i] << std::endl;
             }
-            output = softmax(output);
+            sumLayer = output;
+            output = sigmoid(output);
             /*for (int i = 0; i < output.size(); ++i){
                 std::cout << i+1 << " : " << output[i] << std::endl;
             }*/
@@ -593,17 +709,24 @@ class ConvolutionalNeuralNetwork {
       }
       void train(){
         int epoch = 10;
-        std::cout << "size: " << dataset.size() << std::endl;
+        //std::cout << "size: " << dataset.size() << std::endl;
         for (int i = 0; i < epoch; ++i){
             for (int j = 0; j < dataset.size(); ++j){
                 std::vector<double> prediction = feedforward(dataset[j].first); 
                 std::cout << "epoch: " << i << " loss: " << MSEloss(prediction, dataset[j].second) << std::endl;
                 
                 std::vector<double> derivLoss = MSElossDerivative(prediction, dataset[j].second);
-                std::vector<std::vector<double>> softmaxDeriv = softmaxDerivative(denselayerSave); 
-                std::cout << "derivLoss: " << derivLoss.size() << std::endl;
-                std::cout << "softmaxDeriv: " << softmaxDeriv.size() << std::endl;
-                std::cout << "softmaxDeriv[0]: " << softmaxDeriv[0].size() << std::endl;
+                std::vector<double> sigmoidDeriv = derivativeSigmoid(sumLayer); 
+                //std::cout << "derivLoss: " << derivLoss.size() << std::endl;
+                //std::cout << "ReluDeriv: " << ReluDeriv.size() << std::endl;
+                for (int k = 0; k < derivLoss.size(); ++k){
+                    for (int g = 0; g < denselayerSave.size(); ++g){
+                        weightsW1[k][g] -= learningRate * derivLoss[k] * sigmoidDeriv[k] * denselayerSave[g];
+                    }
+                    bias1[k] -= learningRate * derivLoss[k] * sigmoidDeriv[k]; 
+                }
+
+                //std::cout << "softmaxDeriv[0]: " << softmaxDeriv[0].size() << std::endl;
             }
              
         }
